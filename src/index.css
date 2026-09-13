@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-slate-50 text-dark-text antialiased;
+    overscroll-behavior-y: contain;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+  /* Botón táctil grande, pensado para uso rápido con una mano en el mostrador */
+  .btn-primary {
+    @apply bg-primary text-white font-semibold py-3 px-6 rounded-xl shadow-sm
+           active:scale-95 transition-transform duration-100
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-success {
+    @apply bg-success text-white font-semibold py-3 px-6 rounded-xl shadow-sm
+           active:scale-95 transition-transform duration-100;
+  }
+
+  .btn-warning {
+    @apply bg-warning text-white font-semibold py-3 px-6 rounded-xl shadow-sm
+           active:scale-95 transition-transform duration-100;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-4;
+  }
+
+  .input-field {
+    @apply w-full rounded-xl border border-slate-300 px-4 py-3 text-dark-text
+           focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+  }
+}
