@@ -15,6 +15,21 @@ const TABLAS_SINCRONIZABLES = [
 ]
 
 /**
+ * Obtiene los registros pendientes (synced === false) de una tabla.
+ *
+ * IMPORTANTE: no usamos `.where('synced').equals(false)` porque IndexedDB
+ * (versión previa a la 2ª edición del spec) no soporta booleanos como
+ * claves de índice, y algunos navegadores (Safari/iOS, versiones antiguas
+ * de Chrome/Android) lanzan un DexieError al evaluarlo. En vez de eso,
+ * recorremos la tabla completa con `.filter()`, que no toca el índice
+ * y funciona igual en todos los navegadores. Para el volumen de datos
+ * de una bodega (cientos, no millones de registros) el costo es mínimo.
+ */
+async function obtenerPendientes(tablaLocal) {
+  return tablaLocal.filter((registro) => registro.synced === false).toArray()
+}
+
+/**
  * Busca en Dexie todos los registros pendientes (synced === false)
  * en products, sales, customers y movements; los sube a Firestore
  * y, tras confirmar cada escritura, los marca como synced: true en local.
@@ -27,7 +42,7 @@ export async function sincronizarDatosLocales() {
   let totalFallidos = 0
 
   for (const { tablaLocal, coleccionRemota } of TABLAS_SINCRONIZABLES) {
-    const pendientes = await tablaLocal.where('synced').equals(false).toArray()
+    const pendientes = await obtenerPendientes(tablaLocal)
 
     for (const registro of pendientes) {
       try {

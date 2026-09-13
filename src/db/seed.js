@@ -1,4 +1,5 @@
 import { db } from './dexie'
+import { MASTER_PRODUCTS } from './masterCatalog'
 
 /**
  * Inyecta datos de prueba locales SOLO si las tablas
@@ -14,37 +15,21 @@ export async function seedDatabase() {
 
   const hoy = new Date().toISOString()
 
-  // --- Productos ---
+  // --- Productos: se precarga el Catálogo Maestro completo ---
+  // Stock inicial en 0 porque el bodeguero aún no ha contado su inventario real;
+  // el precio queda editable, precioSugerido solo es una referencia de partida.
   if (totalProductos === 0) {
-    await db.products.bulkAdd([
-      {
-        id: 'prod-001',
-        codigoBarras: '7750243004018',
-        nombre: 'Leche Gloria 400g',
-        categoria: 'Lácteos',
-        precioVenta: 4.00,
-        stock: 24,
+    await db.products.bulkAdd(
+      MASTER_PRODUCTS.map((producto, indice) => ({
+        id: `prod-catalogo-${indice + 1}`,
+        codigoBarras: producto.codigoBarras,
+        nombre: producto.nombre,
+        categoria: producto.categoria,
+        precioVenta: producto.precioSugerido,
+        stock: 0,
         synced: false,
-      },
-      {
-        id: 'prod-002',
-        codigoBarras: '7751271011012',
-        nombre: 'Aceite Primor 1L',
-        categoria: 'Abarrotes',
-        precioVenta: 9.50,
-        stock: 12,
-        synced: false,
-      },
-      {
-        id: 'prod-003',
-        codigoBarras: '7751150300201',
-        nombre: 'Galletas Soda Field',
-        categoria: 'Snacks',
-        precioVenta: 2.50,
-        stock: 40,
-        synced: false,
-      },
-    ])
+      }))
+    )
   }
 
   // --- Cliente fiado ---

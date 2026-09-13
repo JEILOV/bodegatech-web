@@ -1,9 +1,18 @@
 import { useState } from 'react'
 import { db } from '../../../db/dexie'
+import { MASTER_PRODUCTS } from '../../../db/masterCatalog'
 import { buscarProductoPorCodigo } from '../../../services/openFoodFactsApi'
 import { ScannerModal } from '../../ventas/components/ScannerModal'
 
 const CATEGORIA_POR_DEFECTO = 'Abarrotes'
+
+/**
+ * Búsqueda instantánea (0ms) en el catálogo maestro local,
+ * antes de recurrir a la API externa.
+ */
+function buscarEnCatalogoMaestro(codigoBarras) {
+  return MASTER_PRODUCTS.find((producto) => producto.codigoBarras === codigoBarras) || null
+}
 
 export function NuevoProductoModal({ onCerrar, onProductoCreado }) {
   const [codigoBarras, setCodigoBarras] = useState('')
@@ -21,18 +30,32 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado }) {
     setCodigoBarras(codigo)
     setConsultando(true)
     setMensajeApi('')
+    setImagen(null)
 
-    const resultado = await buscarProductoPorCodigo(codigo)
-
-    if (resultado) {
-      setNombre(resultado.nombre)
-      setCategoria(resultado.categoria)
-      setImagen(resultado.imagen)
-      setMensajeApi('✅ Producto encontrado en Open Food Facts')
-    } else {
-      setMensajeApi('No se encontró información. Completa los datos manualmente.')
+    // 1º Catálogo Maestro local (instantáneo, 0ms, funciona sin internet)
+    const productoLocal = buscarEnCatalogoMaestro(codigo)
+    if (productoLocal) {
+      setNombre(productoLocal.nombre)
+      setCategoria(productoLocal.categoria)
+      setPrecioVenta(String(productoLocal.precioSugerido))
+      setMensajeApi('✅ Producto encontrado en el Catálogo Maestro (offline)')
+      setConsultando(false)
+      return
     }
 
+    // 2º Open Food Facts (requiere internet)
+    const resultadoApi = await buscarProductoPorCodigo(codigo)
+    if (resultadoApi) {
+      setNombre(resultadoApi.nombre)
+      setCategoria(resultadoApi.categoria)
+      setImagen(resultadoApi.imagen)
+      setMensajeApi('✅ Producto encontrado en Open Food Facts')
+      setConsultando(false)
+      return
+    }
+
+    // 3º Registro manual
+    setMensajeApi('No se encontró información. Completa los datos manualmente.')
     setConsultando(false)
   }
 
@@ -128,11 +151,11 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado }) {
           className="w-full bg-primary text-white font-semibold py-3 rounded-xl
                      active:scale-95 transition-transform duration-100 flex items-center justify-center gap-2"
         >
-          <span>📷</span> Escanear / Consultar API
+          <span>📷</span> Escanear / Consultar
         </button>
 
         {consultando && (
-          <p className="text-xs text-dark-text-muted text-center">Consultando Open Food Facts...</p>
+          <p className="text-xs text-dark-text-muted text-center">Buscando producto...</p>
         )}
         {mensajeApi && !consultando && (
           <p className="text-xs text-dark-text-muted text-center">{mensajeApi}</p>
