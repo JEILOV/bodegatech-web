@@ -3,12 +3,14 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/dexie'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { EditarStockModal } from './components/EditarStockModal'
+import { NuevoProductoModal } from './components/NuevoProductoModal'
 
 const STOCK_CRITICO_UMBRAL = 5
 
 export function InventarioPage({ onVolver }) {
   const [busqueda, setBusqueda] = useState('')
   const [productoParaEditar, setProductoParaEditar] = useState(null)
+  const [mostrarNuevoProducto, setMostrarNuevoProducto] = useState(false)
 
   const productos = useLiveQuery(() => db.products.toArray(), [])
 
@@ -34,6 +36,10 @@ export function InventarioPage({ onVolver }) {
       </header>
 
       <main className="px-4 pt-4 space-y-4">
+        <button onClick={() => setMostrarNuevoProducto(true)} className="btn-primary w-full">
+          + Registrar producto
+        </button>
+
         <input
           type="text"
           value={busqueda}
@@ -97,6 +103,10 @@ export function InventarioPage({ onVolver }) {
           producto={productoParaEditar}
           onCerrar={() => setProductoParaEditar(null)}
         />
+      )}
+
+      {mostrarNuevoProducto && (
+        <NuevoProductoModal onCerrar={() => setMostrarNuevoProducto(false)} />
       )}
     </div>
   )
