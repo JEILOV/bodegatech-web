@@ -5,21 +5,11 @@ import { QuickActions } from './components/QuickActions'
 
 const STOCK_BAJO_UMBRAL = 5
 
-export function HomeScreen() {
+export function HomeScreen({ onNuevaVenta, onVerFiados }) {
   const productosStockBajo = useLiveQuery(
     () => db.products.filter((producto) => producto.stock <= STOCK_BAJO_UMBRAL).toArray(),
     []
   )
-
-  const handleNuevaVenta = () => {
-    // TODO: navegar a la pantalla de cobro express
-    console.log('Ir a Nueva Venta / Escanear')
-  }
-
-  const handleVerFiados = () => {
-    // TODO: navegar a la libreta de fiados
-    console.log('Ir a Clientes Fiados')
-  }
 
   const handleVerInventario = () => {
     // TODO: navegar al inventario
@@ -38,8 +28,8 @@ export function HomeScreen() {
         <MetricsHeader />
 
         <QuickActions
-          onNuevaVenta={handleNuevaVenta}
-          onVerFiados={handleVerFiados}
+          onNuevaVenta={onNuevaVenta}
+          onVerFiados={onVerFiados}
           onVerInventario={handleVerInventario}
         />
 
