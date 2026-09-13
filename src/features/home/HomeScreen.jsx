@@ -5,20 +5,14 @@ import { QuickActions } from './components/QuickActions'
 
 const STOCK_BAJO_UMBRAL = 5
 
-export function HomeScreen({ onNuevaVenta, onVerFiados }) {
+export function HomeScreen({ onNuevaVenta, onVerFiados, onVerInventario }) {
   const productosStockBajo = useLiveQuery(
     () => db.products.filter((producto) => producto.stock <= STOCK_BAJO_UMBRAL).toArray(),
     []
   )
 
-  const handleVerInventario = () => {
-    // TODO: navegar al inventario
-    console.log('Ir a Inventario')
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 pb-8">
-      {/* Encabezado de bienvenida */}
       <header className="bg-primary px-5 pt-8 pb-6 rounded-b-3xl shadow-md">
         <p className="text-primary-100 text-sm">Bienvenido de vuelta a</p>
         <h1 className="text-white text-2xl font-bold">Bodega Don Pedro</h1>
@@ -30,10 +24,9 @@ export function HomeScreen({ onNuevaVenta, onVerFiados }) {
         <QuickActions
           onNuevaVenta={onNuevaVenta}
           onVerFiados={onVerFiados}
-          onVerInventario={handleVerInventario}
+          onVerInventario={onVerInventario}
         />
 
-        {/* Alertas de stock bajo */}
         <section className="card">
           <h2 className="text-sm font-bold text-dark-text uppercase tracking-wide mb-3">
             ⚠️ Alertas de stock bajo
