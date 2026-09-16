@@ -1,4 +1,4 @@
-import { doc, setDoc } from 'firebase/firestore'
+import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore'
 import { db } from '../db/dexie'
 import { dbCloud } from './firebase'
 
@@ -73,6 +73,83 @@ export async function sincronizarDatosLocales() {
   }
 
   return { totalSincronizados, totalFallidos }
+}
+
+/**
+ * Cloud-first en tiempo real: suscribe products, sales, customers y
+ * movements a `onSnapshot`. El PRIMER snapshot de cada colección ya trae
+ * el estado completo actual de Firestore (esa es nuestra "carga inicial
+ * obligatoria"); los snapshots siguientes son los cambios en vivo, así que
+ * no hace falta un `getDocs` aparte que podría desincronizarse del propio
+ * listener.
+ *
+ * Cada cambio remoto se aplica a Dexie con `put`/`delete`. Cada página ya
+ * usa `useLiveQuery`, así que la UI se actualiza sola en cuanto Dexie
+ * cambia — sin recargar, sin navegar a otra pantalla.
+ *
+ * Salvaguarda de conflictos: si un registro local tiene una edición
+ * pendiente de subir (`synced: false`, por ejemplo un abono hecho offline
+ * que todavía no llegó a Firestore), NO lo pisamos con la versión remota
+ * -probablemente más vieja-. Dejamos que `sincronizarDatosLocales` la suba
+ * y que este mismo listener la confirme después con `synced: true`.
+ *
+ * @returns {{ cancelarTodo: () => void, listoParaUsar: Promise<void[]> }}
+ */
+export function iniciarSincronizacionEnTiempoReal() {
+  const cancelaciones = []
+  const primerasCargas = []
+
+  for (const { tablaLocal, coleccionRemota } of TABLAS_SINCRONIZABLES) {
+    let resolverPrimeraCarga
+    primerasCargas.push(
+      new Promise((resolve) => {
+        resolverPrimeraCarga = resolve
+      })
+    )
+
+    const cancelar = onSnapshot(
+      collection(dbCloud, coleccionRemota),
+      async (snapshot) => {
+        for (const cambio of snapshot.docChanges()) {
+          try {
+            if (cambio.type === 'removed') {
+              await tablaLocal.delete(cambio.doc.id)
+              continue
+            }
+
+            const registroRemoto = { ...cambio.doc.data(), id: cambio.doc.id, synced: true }
+            const registroLocal = await tablaLocal.get(cambio.doc.id)
+
+            if (registroLocal && registroLocal.synced === false) {
+              // Hay una edición local pendiente de subir: no la pisamos.
+              continue
+            }
+
+            await tablaLocal.put(registroRemoto)
+          } catch (error) {
+            console.error(
+              `[sync] Error aplicando cambio en tiempo real de "${coleccionRemota}":`,
+              error
+            )
+          }
+        }
+
+        resolverPrimeraCarga()
+      },
+      (error) => {
+        console.error(`[sync] Listener de "${coleccionRemota}" falló:`, error)
+        // No bloqueamos el arranque de la app si un listener falla (ej. sin internet).
+        resolverPrimeraCarga()
+      }
+    )
+
+    cancelaciones.push(cancelar)
+  }
+
+  return {
+    cancelarTodo: () => cancelaciones.forEach((cancelar) => cancelar()),
+    listoParaUsar: Promise.all(primerasCargas),
+  }
 }
 
 export default sincronizarDatosLocales

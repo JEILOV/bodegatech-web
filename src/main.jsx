@@ -2,34 +2,24 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
-import { seedDatabase } from './db/seed'
 
 /**
- * Antes, `seedDatabase()` se llamaba "fire-and-forget" (sin await) y React
- * montaba HomeScreen/MetricsHeader en paralelo. En un celular real, sobre
- * todo justo después de limpiar datos, la siembra inicial (bulkAdd de todo
- * el catálogo maestro) puede tardar lo suficiente como para que el primer
- * montaje de esas pantallas lea Dexie a medio poblar, dejando las alertas
- * de stock desincronizadas.
+ * La siembra inicial (seedDatabase) ya NO se dispara aquí.
  *
- * Ahora se espera explícitamente a que la siembra termine (o falle) antes
- * de renderizar la app, para que ningún componente pueda montarse y leer
- * las tablas de Dexie mientras todavía se están insertando datos.
+ * Antes se llamaba en el arranque de la app, sin depender de sesión ni de
+ * la nube. Eso funcionaba mientras cada dispositivo vivía aislado, pero
+ * ahora que Firestore es la fuente de la verdad (ver App.jsx), sembrar
+ * demasiado pronto es peligroso: un dispositivo nuevo de una cuenta que
+ * YA tiene datos reales en la nube podía insertar datos de demo
+ * (cliente/ventas de prueba, catálogo con stock en 0) que luego se subían
+ * y pisaban el estado real compartido entre dispositivos.
+ *
+ * Ahora la decisión de sembrar vive en App.jsx: solo ocurre después de
+ * autenticarse y de intentar traer todo de Firestore, y solo si las
+ * tablas siguen genuinamente vacías (cuenta nueva de verdad).
  */
-async function iniciarApp() {
-  try {
-    await seedDatabase()
-  } catch (error) {
-    console.error('[seed] No se pudo completar la siembra inicial:', error)
-    // Continuamos igual: la app debe poder abrir aunque la siembra falle
-    // (por ejemplo, si el usuario ya tiene datos reales y no es su primera vez).
-  }
-
-  ReactDOM.createRoot(document.getElementById('root')).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>,
-  )
-}
-
-iniciarApp()
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
