@@ -4,6 +4,7 @@ import { useSyncOffline } from './hooks/useSyncOffline'
 import { LoginScreen } from './features/auth/LoginScreen'
 import { HomeScreen } from './features/home/HomeScreen'
 import { VentasPage } from './features/ventas/VentasPage'
+import { CierreCajaPage } from './features/ventas/CierreCajaPage'
 import { FiadosPage } from './features/fiados/FiadosPage'
 import { InventarioPage } from './features/inventario/InventarioPage'
 
@@ -49,6 +50,10 @@ function App() {
     return <FiadosPage onVolver={() => setPantalla('home')} />
   }
 
+  if (pantalla === 'cierre') {
+    return <CierreCajaPage onVolver={() => setPantalla('home')} />
+  }
+
   if (pantalla === 'inventario') {
     return <InventarioPage onVolver={() => setPantalla('home')} />
   }
@@ -59,6 +64,7 @@ function App() {
         onNuevaVenta={() => setPantalla('ventas')}
         onVerFiados={() => setPantalla('fiados')}
         onVerInventario={() => setPantalla('inventario')}
+        onVerCierre={() => setPantalla('cierre')}
       />
       <button
         onClick={manejarCerrarSesion}

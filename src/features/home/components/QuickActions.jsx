@@ -1,4 +1,4 @@
-export function QuickActions({ onNuevaVenta, onVerFiados, onVerInventario }) {
+export function QuickActions({ onNuevaVenta, onVerFiados, onVerInventario, onVerCierre }) {
   return (
     <div className="space-y-3">
       {/* Botón principal */}
@@ -12,7 +12,7 @@ export function QuickActions({ onNuevaVenta, onVerFiados, onVerInventario }) {
         NUEVA VENTA / ESCANEAR
       </button>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {/* Botón Clientes Fiados */}
         <button
           onClick={onVerFiados}
@@ -21,7 +21,7 @@ export function QuickActions({ onNuevaVenta, onVerFiados, onVerInventario }) {
                      flex flex-col items-center gap-1 cursor-pointer"
         >
           <span className="text-xl">📒</span>
-          <span className="text-sm">Clientes Fiados</span>
+          <span className="text-xs text-center">Clientes Fiados</span>
         </button>
 
         {/* Botón Ver Inventario */}
@@ -32,7 +32,18 @@ export function QuickActions({ onNuevaVenta, onVerFiados, onVerInventario }) {
                      flex flex-col items-center gap-1 cursor-pointer"
         >
           <span className="text-xl">📦</span>
-          <span className="text-sm">Ver Inventario</span>
+          <span className="text-xs text-center">Ver Inventario</span>
+        </button>
+
+        {/* Botón Cierre de Caja */}
+        <button
+          onClick={onVerCierre}
+          className="bg-white border border-slate-200 text-dark-text font-semibold py-4
+                     rounded-xl shadow-sm active:scale-95 transition-transform duration-100
+                     flex flex-col items-center gap-1 cursor-pointer"
+        >
+          <span className="text-xl">🧮</span>
+          <span className="text-xs text-center">Cierre de Caja</span>
         </button>
       </div>
     </div>

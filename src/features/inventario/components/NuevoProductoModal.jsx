@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { db } from '../../../db/dexie'
 import { MASTER_PRODUCTS } from '../../../db/masterCatalog'
 import { buscarProductoPorCodigo } from '../../../services/openFoodFactsApi'
@@ -14,8 +14,14 @@ function buscarEnCatalogoMaestro(codigoBarras) {
   return MASTER_PRODUCTS.find((producto) => producto.codigoBarras === codigoBarras) || null
 }
 
-export function NuevoProductoModal({ onCerrar, onProductoCreado }) {
-  const [codigoBarras, setCodigoBarras] = useState('')
+/**
+ * `codigoInicial`: cuando este modal se abre desde la "Entrada de
+ * Mercadería" porque el código escaneado no se encontró en ningún lado,
+ * llega prellenado acá y se consulta automáticamente al montar el
+ * componente, para que el bodeguero no tenga que volver a escribirlo.
+ */
+export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }) {
+  const [codigoBarras, setCodigoBarras] = useState(codigoInicial || '')
   const [nombre, setNombre] = useState('')
   const [categoria, setCategoria] = useState(CATEGORIA_POR_DEFECTO)
   const [imagen, setImagen] = useState(null)
@@ -58,6 +64,15 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado }) {
     setMensajeApi('No se encontró información. Completa los datos manualmente.')
     setConsultando(false)
   }
+
+  useEffect(() => {
+    // Se ejecuta una sola vez al montar, con el código ya escaneado desde afuera.
+    if (codigoInicial) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      consultarCodigo(codigoInicial)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function manejarCodigoEscaneado(codigo) {
     setMostrarScanner(false)

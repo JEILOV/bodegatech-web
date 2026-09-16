@@ -5,7 +5,7 @@ import { QuickActions } from './components/QuickActions'
 
 const STOCK_BAJO_UMBRAL = 5
 
-export function HomeScreen({ onNuevaVenta, onVerFiados, onVerInventario }) {
+export function HomeScreen({ onNuevaVenta, onVerFiados, onVerInventario, onVerCierre }) {
   const productosStockBajo = useLiveQuery(
     () => db.products.filter((producto) => producto.stock <= STOCK_BAJO_UMBRAL).toArray(),
     []
@@ -25,6 +25,7 @@ export function HomeScreen({ onNuevaVenta, onVerFiados, onVerInventario }) {
           onNuevaVenta={onNuevaVenta}
           onVerFiados={onVerFiados}
           onVerInventario={onVerInventario}
+          onVerCierre={onVerCierre}
         />
 
         <section className="card">

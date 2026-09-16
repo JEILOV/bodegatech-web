@@ -4,6 +4,7 @@ import { db } from '../../db/dexie'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { EditarStockModal } from './components/EditarStockModal'
 import { NuevoProductoModal } from './components/NuevoProductoModal'
+import { EntradaMercaderiaModal } from './components/EntradaMercaderiaModal'
 
 const STOCK_CRITICO_UMBRAL = 5
 
@@ -11,8 +12,23 @@ export function InventarioPage({ onVolver }) {
   const [busqueda, setBusqueda] = useState('')
   const [productoParaEditar, setProductoParaEditar] = useState(null)
   const [mostrarNuevoProducto, setMostrarNuevoProducto] = useState(false)
+  const [mostrarEntradaMercaderia, setMostrarEntradaMercaderia] = useState(false)
+  const [codigoParaNuevoProducto, setCodigoParaNuevoProducto] = useState(null)
 
   const productos = useLiveQuery(() => db.products.toArray(), [])
+
+  // La Entrada de Mercadería no encontró el código en Dexie ni en Firestore:
+  // se cierra ese flujo y se abre el de registro manual, con el código ya listo.
+  function manejarProductoNoEncontrado(codigo) {
+    setMostrarEntradaMercaderia(false)
+    setCodigoParaNuevoProducto(codigo)
+    setMostrarNuevoProducto(true)
+  }
+
+  function cerrarNuevoProducto() {
+    setMostrarNuevoProducto(false)
+    setCodigoParaNuevoProducto(null)
+  }
 
   const productosFiltrados = useMemo(() => {
     if (!productos) return []
@@ -36,9 +52,21 @@ export function InventarioPage({ onVolver }) {
       </header>
 
       <main className="px-4 pt-4 space-y-4">
-        <button onClick={() => setMostrarNuevoProducto(true)} className="btn-primary w-full">
-          + Registrar producto
-        </button>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setMostrarEntradaMercaderia(true)}
+            className="btn-primary flex items-center justify-center gap-2"
+          >
+            <span>📷</span> Entrada de Mercadería
+          </button>
+          <button
+            onClick={() => setMostrarNuevoProducto(true)}
+            className="bg-white border border-slate-200 text-dark-text font-semibold py-3
+                       rounded-xl active:scale-95 transition-transform duration-100"
+          >
+            + Registrar producto
+          </button>
+        </div>
 
         <input
           type="text"
@@ -106,7 +134,17 @@ export function InventarioPage({ onVolver }) {
       )}
 
       {mostrarNuevoProducto && (
-        <NuevoProductoModal onCerrar={() => setMostrarNuevoProducto(false)} />
+        <NuevoProductoModal
+          codigoInicial={codigoParaNuevoProducto}
+          onCerrar={cerrarNuevoProducto}
+        />
+      )}
+
+      {mostrarEntradaMercaderia && (
+        <EntradaMercaderiaModal
+          onCerrar={() => setMostrarEntradaMercaderia(false)}
+          onProductoNoEncontrado={manejarProductoNoEncontrado}
+        />
       )}
     </div>
   )
