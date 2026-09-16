@@ -6,8 +6,23 @@ import { QuickActions } from './components/QuickActions'
 const STOCK_BAJO_UMBRAL = 5
 
 export function HomeScreen({ onNuevaVenta, onVerFiados, onVerInventario, onVerCierre }) {
+  // Mismo patrón que en MetricsHeader: valor por defecto ([]) para que la
+  // sección nunca dependa de que la primera ejecución de la consulta
+  // coincida exactamente con el momento en que `seedDatabase()` terminó de
+  // insertar productos. Ahora que main.jsx espera la siembra antes de
+  // montar la app, esta consulta ya arranca con datos reales; el
+  // try/catch + default es una segunda capa de seguridad para que un
+  // error puntual no deje la sección "congelada".
   const productosStockBajo = useLiveQuery(
-    () => db.products.filter((producto) => producto.stock <= STOCK_BAJO_UMBRAL).toArray(),
+    async () => {
+      try {
+        return await db.products.filter((producto) => producto.stock <= STOCK_BAJO_UMBRAL).toArray()
+      } catch (error) {
+        console.error('[HomeScreen] Error obteniendo productos con stock bajo:', error)
+        return []
+      }
+    },
+    [],
     []
   )
 
@@ -33,26 +48,20 @@ export function HomeScreen({ onNuevaVenta, onVerFiados, onVerInventario, onVerCi
             ⚠️ Alertas de stock bajo
           </h2>
 
-          {productosStockBajo === undefined && (
-            <p className="text-sm text-dark-text-muted">Cargando...</p>
-          )}
-
-          {productosStockBajo?.length === 0 && (
+          {productosStockBajo.length === 0 && (
             <p className="text-sm text-dark-text-muted">
               Todo el inventario está en niveles saludables.
             </p>
           )}
 
-          {productosStockBajo?.length > 0 && (
+          {productosStockBajo.length > 0 && (
             <ul className="space-y-2">
               {productosStockBajo.map((producto) => (
                 <li
                   key={producto.id}
                   className="flex items-center justify-between bg-warning/10 rounded-lg px-3 py-2"
                 >
-                  <span className="text-sm font-medium text-dark-text">
-                    {producto.nombre}
-                  </span>
+                  <span className="text-sm font-medium text-dark-text">{producto.nombre}</span>
                   <span className="text-xs font-bold text-warning">
                     Quedan {producto.stock}
                   </span>
