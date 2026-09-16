@@ -76,16 +76,69 @@ export async function sincronizarDatosLocales() {
 }
 
 /**
- * Cloud-first en tiempo real: suscribe products, sales, customers y
- * movements a `onSnapshot`. El PRIMER snapshot de cada colección ya trae
- * el estado completo actual de Firestore (esa es nuestra "carga inicial
- * obligatoria"); los snapshots siguientes son los cambios en vivo, así que
- * no hace falta un `getDocs` aparte que podría desincronizarse del propio
- * listener.
+ * Aplica el PRIMER snapshot de una colección como un reemplazo atómico y
+ * completo de la tabla local: si Firestore tiene documentos, la tabla de
+ * Dexie queda exactamente igual a la nube (ni un registro viejo/huérfano
+ * se queda atrás). Todo ocurre dentro de una única transacción de Dexie,
+ * así la UI (vía useLiveQuery) nunca ve un estado a medio sincronizar
+ * (por ejemplo, un instante con clientes pero sin sus ventas).
  *
- * Cada cambio remoto se aplica a Dexie con `put`/`delete`. Cada página ya
- * usa `useLiveQuery`, así que la UI se actualiza sola en cuanto Dexie
- * cambia — sin recargar, sin navegar a otra pantalla.
+ * Se respetan los registros locales con una edición pendiente de subir
+ * (`synced: false`): esos no se tocan, para no perder un abono o una
+ * venta hecha offline que todavía no llegó a Firestore.
+ */
+async function reemplazarTablaDeFormaAtomica(tablaLocal, coleccionRemota, snapshot) {
+  await db.transaction('rw', tablaLocal, async () => {
+    const registrosLocales = await tablaLocal.toArray()
+    const idsPendientes = new Set(
+      registrosLocales.filter((registro) => registro.synced === false).map((r) => r.id)
+    )
+
+    const idsRemotos = new Set()
+    const registrosParaEscribir = []
+
+    for (const documento of snapshot.docs) {
+      idsRemotos.add(documento.id)
+      if (idsPendientes.has(documento.id)) {
+        // Edición local sin subir todavía: la nube probablemente está
+        // desactualizada respecto a este registro. La dejamos tal cual.
+        continue
+      }
+      registrosParaEscribir.push({ ...documento.data(), id: documento.id, synced: true })
+    }
+
+    if (registrosParaEscribir.length > 0) {
+      await tablaLocal.bulkPut(registrosParaEscribir)
+    }
+
+    // Cualquier registro local YA sincronizado que ya no exista en la
+    // nube (borrado desde otro dispositivo mientras este estaba
+    // desconectado) se elimina para que ambos lados queden idénticos.
+    const idsAEliminar = registrosLocales
+      .filter((registro) => registro.synced !== false && !idsRemotos.has(registro.id))
+      .map((registro) => registro.id)
+
+    if (idsAEliminar.length > 0) {
+      await tablaLocal.bulkDelete(idsAEliminar)
+    }
+  }).catch((error) => {
+    console.error(`[sync] Error en el reemplazo atómico inicial de "${coleccionRemota}":`, error)
+    throw error
+  })
+}
+
+/**
+ * Cloud-first en tiempo real: suscribe products, sales, customers y
+ * movements a `onSnapshot`. El PRIMER snapshot de cada colección se
+ * aplica con `reemplazarTablaDeFormaAtomica` (ver arriba): así cumplimos
+ * que, si la nube tiene documentos, la tabla local quede sincronizada de
+ * forma atómica ANTES de que `listoParaUsar` se resuelva y App.jsx quite
+ * la pantalla de carga. Los snapshots siguientes son cambios en vivo y se
+ * aplican de forma incremental con `docChanges()` — no hace falta
+ * reescribir toda la tabla en cada actualización.
+ *
+ * Cada página ya usa `useLiveQuery`, así que la UI se actualiza sola en
+ * cuanto Dexie cambia — sin recargar, sin navegar a otra pantalla.
  *
  * Salvaguarda de conflictos: si un registro local tiene una edición
  * pendiente de subir (`synced: false`, por ejemplo un abono hecho offline
@@ -107,31 +160,42 @@ export function iniciarSincronizacionEnTiempoReal() {
       })
     )
 
+    let primeraCargaAplicada = false
+
     const cancelar = onSnapshot(
       collection(dbCloud, coleccionRemota),
       async (snapshot) => {
-        for (const cambio of snapshot.docChanges()) {
-          try {
-            if (cambio.type === 'removed') {
-              await tablaLocal.delete(cambio.doc.id)
-              continue
+        try {
+          if (!primeraCargaAplicada) {
+            // Carga inicial: reemplazo atómico completo, sea el snapshot
+            // de red o el que ya trae el caché local persistente de
+            // Firestore (ver firebase.js) al recargar la página.
+            await reemplazarTablaDeFormaAtomica(tablaLocal, coleccionRemota, snapshot)
+            primeraCargaAplicada = true
+          } else {
+            // Actualizaciones en vivo posteriores: aplicar solo lo que cambió.
+            for (const cambio of snapshot.docChanges()) {
+              if (cambio.type === 'removed') {
+                await tablaLocal.delete(cambio.doc.id)
+                continue
+              }
+
+              const registroRemoto = { ...cambio.doc.data(), id: cambio.doc.id, synced: true }
+              const registroLocal = await tablaLocal.get(cambio.doc.id)
+
+              if (registroLocal && registroLocal.synced === false) {
+                // Hay una edición local pendiente de subir: no la pisamos.
+                continue
+              }
+
+              await tablaLocal.put(registroRemoto)
             }
-
-            const registroRemoto = { ...cambio.doc.data(), id: cambio.doc.id, synced: true }
-            const registroLocal = await tablaLocal.get(cambio.doc.id)
-
-            if (registroLocal && registroLocal.synced === false) {
-              // Hay una edición local pendiente de subir: no la pisamos.
-              continue
-            }
-
-            await tablaLocal.put(registroRemoto)
-          } catch (error) {
-            console.error(
-              `[sync] Error aplicando cambio en tiempo real de "${coleccionRemota}":`,
-              error
-            )
           }
+        } catch (error) {
+          console.error(
+            `[sync] Error aplicando snapshot en tiempo real de "${coleccionRemota}":`,
+            error
+          )
         }
 
         resolverPrimeraCarga()

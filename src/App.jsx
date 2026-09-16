@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { observarEstadoAuth, cerrarSesion } from './services/authService'
 import { iniciarSincronizacionEnTiempoReal } from './services/syncService'
 import { useSyncOffline } from './hooks/useSyncOffline'
@@ -15,11 +15,36 @@ import { InventarioPage } from './features/inventario/InventarioPage'
 // continuar igual con lo que haya en Dexie (por ejemplo, sin internet).
 const TIEMPO_MAXIMO_ESPERA_NUBE_MS = 4000
 
+/**
+ * Spinner + mensaje, reutilizado por los dos estados de carga bloqueantes
+ * (verificando sesión / hidratando desde la nube). Nunca deja pasar a
+ * HomeScreen (y por lo tanto a MetricsHeader) mientras está visible.
+ */
+function PantallaDeCarga({ mensaje }) {
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
+      <div
+        className="h-8 w-8 rounded-full border-2 border-slate-200 border-t-primary animate-spin"
+        role="status"
+        aria-label="Cargando"
+      />
+      <p className="text-sm text-dark-text-muted">{mensaje}</p>
+    </div>
+  )
+}
+
 function App() {
   const [pantalla, setPantalla] = useState('home')
   const [usuario, setUsuario] = useState(null)
   const [verificandoSesion, setVerificandoSesion] = useState(true)
   const [hidratandoNube, setHidratandoNube] = useState(true)
+
+  // Evita relanzar toda la hidratación (y, con ella, el riesgo de tocar
+  // seedDatabase()/Dexie de nuevo) cuando Firebase Auth emite un usuario
+  // con la MISMA sesión pero una referencia de objeto distinta (por
+  // ejemplo al refrescar el ID token en segundo plano). Solo nos importa
+  // reaccionar cuando el UID realmente cambia (login/logout).
+  const uidHidratadoRef = useRef(null)
 
   useSyncOffline()
 
@@ -38,7 +63,15 @@ function App() {
   // desde OTRO dispositivo llega aquí solo, sin recargar ni borrar caché.
   useEffect(() => {
     if (!usuario) {
+      uidHidratadoRef.current = null
       setHidratandoNube(true)
+      return
+    }
+
+    // Ya hidratamos esta misma sesión (mismo UID); un cambio de
+    // referencia de `usuario` por refresco de token no debe volver a
+    // disparar seedDatabase() ni reabrir los listeners de Firestore.
+    if (uidHidratadoRef.current === usuario.uid) {
       return
     }
 
@@ -46,13 +79,18 @@ function App() {
     let detenerSincronizacion = () => {}
 
     async function hidratarYSuscribirse() {
+      setHidratandoNube(true)
+
       const { cancelarTodo, listoParaUsar } = iniciarSincronizacionEnTiempoReal()
       detenerSincronizacion = cancelarTodo
 
       // Esperamos la primera descarga real de cada colección (con un tope
-      // de 4s si no hay internet) antes de decidir si sembramos datos de
-      // demo. Así seedDatabase() nunca se ejecuta "encima" de una cuenta
-      // que ya tiene productos/clientes/ventas reales en la nube.
+      // de 4s si no hay internet ni caché local de Firestore disponible)
+      // antes de decidir si sembramos datos de demo. Así seedDatabase()
+      // nunca se ejecuta "encima" de una cuenta que ya tiene
+      // productos/clientes/ventas reales en la nube, y nunca tocamos
+      // Dexie antes de que Auth + la primera descarga de Firestore hayan
+      // terminado.
       await Promise.race([
         listoParaUsar,
         new Promise((resolve) => setTimeout(resolve, TIEMPO_MAXIMO_ESPERA_NUBE_MS)),
@@ -69,6 +107,8 @@ function App() {
       // Solo sembramos si, después de intentar traer todo de Firestore,
       // las 3 tablas siguen vacías: eso significa que es una cuenta
       // genuinamente nueva, no un dispositivo nuevo de una cuenta existente.
+      // Si el usuario ya tenía sesión y datos (locales o recién bajados de
+      // la nube), seedDatabase() jamás se ejecuta.
       if (totalProductos === 0 && totalClientes === 0 && totalVentas === 0) {
         try {
           await seedDatabase()
@@ -77,7 +117,10 @@ function App() {
         }
       }
 
-      if (!cancelado) setHidratandoNube(false)
+      if (!cancelado) {
+        uidHidratadoRef.current = usuario.uid
+        setHidratandoNube(false)
+      }
     }
 
     hidratarYSuscribirse()
@@ -93,25 +136,22 @@ function App() {
     setPantalla('home')
   }
 
-  // Evita el "parpadeo" mostrando LoginScreen antes de saber si ya hay sesión activa
+  // Evita el "parpadeo" mostrando LoginScreen antes de saber si ya hay sesión activa.
+  // Cubre el punto 4: mientras onAuthStateChanged no haya resuelto, jamás se
+  // renderiza HomeScreen/MetricsHeader (ni por lo tanto un S/ 0.00 prematuro).
   if (verificandoSesion) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-sm text-dark-text-muted">Cargando...</p>
-      </div>
-    )
+    return <PantallaDeCarga mensaje="Cargando..." />
   }
 
   if (!usuario) {
     return <LoginScreen />
   }
 
+  // Cubre el punto 4: mientras el primer snapshot de Firestore no haya
+  // llegado (o el timeout de red no se haya cumplido), tampoco se renderiza
+  // HomeScreen/MetricsHeader.
   if (hidratandoNube) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-sm text-dark-text-muted">Sincronizando con la nube...</p>
-      </div>
-    )
+    return <PantallaDeCarga mensaje="Sincronizando con la nube..." />
   }
 
   if (pantalla === 'ventas') {
