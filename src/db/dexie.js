@@ -16,7 +16,12 @@ db.version(1).stores({
 
   customers: 'id, nombre, telefono, deudaTotal, synced',
 
-  // 'customerId' indexado para el historial de abonos/cargos por cliente
+  // 'customerId' indexado para el historial de abonos/cargos por cliente.
+  // Esta tabla ya cumple el rol de "payments"/abonos: cada registro con
+  // tipo: 'abono' es un pago parcial de un fiado. Se le agrega el campo
+  // `tipoPago` (efectivo | yape | plin) para saber el medio usado en cada
+  // abono. Al no ser un campo indexado, no requiere una nueva versión del
+  // esquema de Dexie: basta con guardarlo en el objeto al hacer `.add()`.
   movements: 'id, customerId, fecha, tipo, monto, synced',
 
   // 'productId' indexado para saber qué alertas pertenecen a qué producto

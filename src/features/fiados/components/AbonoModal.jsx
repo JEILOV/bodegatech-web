@@ -2,16 +2,30 @@ import { useState } from 'react'
 import { db } from '../../../db/dexie'
 import { formatCurrency } from '../../../utils/formatCurrency'
 
+const MEDIOS_PAGO = [
+  { valor: 'efectivo', etiqueta: 'Efectivo', icono: '💵' },
+  { valor: 'yape', etiqueta: 'Yape', icono: '📱' },
+  { valor: 'plin', etiqueta: 'Plin', icono: '📲' },
+]
+
 export function AbonoModal({ cliente, onCerrar, onAbonoRegistrado }) {
   const [monto, setMonto] = useState('')
+  const [tipoPago, setTipoPago] = useState('efectivo')
   const [guardando, setGuardando] = useState(false)
 
   const montoNumero = Number(monto)
-  const excedeDeuda = montoNumero > cliente.deudaTotal
+  const montoInvalido = !monto || Number.isNaN(montoNumero) || montoNumero <= 0
+  const excedeDeuda = !montoInvalido && montoNumero > cliente.deudaTotal
+  const puedeConfirmar = !montoInvalido && !excedeDeuda && !guardando
 
   async function manejarConfirmar() {
-    if (!montoNumero || montoNumero <= 0) {
-      alert('Ingresa un monto válido.')
+    if (montoInvalido) {
+      alert('Ingresa un monto válido mayor a S/ 0.00.')
+      return
+    }
+
+    if (excedeDeuda) {
+      alert('El abono no puede superar la deuda total del cliente.')
       return
     }
 
@@ -26,6 +40,7 @@ export function AbonoModal({ cliente, onCerrar, onAbonoRegistrado }) {
           fecha,
           tipo: 'abono',
           monto: montoNumero,
+          tipoPago,
           synced: false,
         })
 
@@ -63,9 +78,10 @@ export function AbonoModal({ cliente, onCerrar, onAbonoRegistrado }) {
         </div>
 
         <div>
-          <label className="text-xs font-medium text-dark-text-muted">Monto del abono</label>
+          <label className="text-xs font-medium text-dark-text-muted">Monto a abonar</label>
           <input
             type="number"
+            inputMode="decimal"
             value={monto}
             onChange={(evento) => setMonto(evento.target.value)}
             placeholder="S/ 0.00"
@@ -79,7 +95,29 @@ export function AbonoModal({ cliente, onCerrar, onAbonoRegistrado }) {
           )}
         </div>
 
-        <button onClick={manejarConfirmar} disabled={guardando} className="btn-success w-full">
+        <div>
+          <label className="text-xs font-medium text-dark-text-muted">Medio de pago</label>
+          <div className="grid grid-cols-3 gap-2 mt-1">
+            {MEDIOS_PAGO.map((medio) => (
+              <button
+                key={medio.valor}
+                type="button"
+                onClick={() => setTipoPago(medio.valor)}
+                className={`flex flex-col items-center justify-center gap-1 rounded-xl border py-2.5 text-xs font-semibold transition-colors
+                  ${
+                    tipoPago === medio.valor
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-slate-200 text-dark-text-muted'
+                  }`}
+              >
+                <span className="text-lg leading-none">{medio.icono}</span>
+                {medio.etiqueta}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button onClick={manejarConfirmar} disabled={!puedeConfirmar} className="btn-success w-full">
           {guardando ? 'Guardando...' : 'Confirmar abono'}
         </button>
       </div>
