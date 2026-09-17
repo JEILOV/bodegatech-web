@@ -114,7 +114,7 @@ function App() {
         await limpiarBaseDatosLocal()
       }
 
-      const { cancelarTodo, listoParaUsar } = iniciarSincronizacionEnTiempoReal()
+      const { cancelarTodo, listoParaUsar } = iniciarSincronizacionEnTiempoReal(usuario.uid)
       detenerSincronizacion = cancelarTodo
 
       // Esperamos la primera descarga real de cada colección (con un tope
@@ -224,4 +224,4 @@ function App() {
   )
 }
 
-export default App
+export default App  

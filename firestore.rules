@@ -15,45 +15,99 @@ service cloud.firestore {
 
     // --- products ---
     match /products/{productId} {
-      allow read: if true;
-      allow create, update: if
+      // Lectura: requiere sesión Y que el documento pertenezca a esta
+      // bodega. Firestore exige que toda consulta con `where` (como la
+      // de syncService.js) esté explícitamente acotada al mismo campo
+      // para poder validarla sin ejecutar la query primero; por eso
+      // syncService.js filtra con `where('bodegaId', '==', bodegaId)`.
+      allow read: if request.auth != null && resource.data.bodegaId == request.auth.uid;
+
+      // Creación: el documento debe nacer con el bodegaId del usuario
+      // autenticado (nunca el de otra cuenta), además de las
+      // validaciones de forma que ya existían.
+      allow create: if
+        request.auth != null &&
+        request.resource.data.bodegaId == request.auth.uid &&
         esTextoValido(request.resource.data.nombre) &&
         esMontoValido(request.resource.data.precioVenta) &&
         request.resource.data.stock is number &&
         request.resource.data.stock >= 0;
-      allow delete: if true;
+
+      // Actualización: el documento ya debía pertenecer a esta bodega
+      // (resource.data) Y debe seguir perteneciéndole después del
+      // cambio (request.resource.data) — así ninguna edición puede
+      // "traspasar" un producto a otra cuenta.
+      allow update: if
+        request.auth != null &&
+        resource.data.bodegaId == request.auth.uid &&
+        request.resource.data.bodegaId == request.auth.uid &&
+        esTextoValido(request.resource.data.nombre) &&
+        esMontoValido(request.resource.data.precioVenta) &&
+        request.resource.data.stock is number &&
+        request.resource.data.stock >= 0;
+
+      allow delete: if request.auth != null && resource.data.bodegaId == request.auth.uid;
     }
 
     // --- sales ---
     match /sales/{saleId} {
-      allow read: if true;
+      allow read: if request.auth != null && resource.data.bodegaId == request.auth.uid;
+
       allow create: if
+        request.auth != null &&
+        request.resource.data.bodegaId == request.auth.uid &&
         esMontoValido(request.resource.data.total) &&
         request.resource.data.tipoPago in ['efectivo', 'fiado'];
-      // Las ventas no deberían editarse una vez registradas (solo re-sincronizarse)
+
+      // Las ventas no deberían editarse una vez registradas (solo
+      // re-sincronizarse) — igual se exige la pertenencia a la bodega
+      // por consistencia con el resto de colecciones.
       allow update: if
+        request.auth != null &&
+        resource.data.bodegaId == request.auth.uid &&
+        request.resource.data.bodegaId == request.auth.uid &&
         esMontoValido(request.resource.data.total);
-      allow delete: if true;
+
+      allow delete: if request.auth != null && resource.data.bodegaId == request.auth.uid;
     }
 
     // --- customers ---
     match /customers/{customerId} {
-      allow read: if true;
-      allow create, update: if
+      allow read: if request.auth != null && resource.data.bodegaId == request.auth.uid;
+
+      allow create: if
+        request.auth != null &&
+        request.resource.data.bodegaId == request.auth.uid &&
         esTextoValido(request.resource.data.nombre) &&
         esMontoValido(request.resource.data.deudaTotal);
-      allow delete: if true;
+
+      allow update: if
+        request.auth != null &&
+        resource.data.bodegaId == request.auth.uid &&
+        request.resource.data.bodegaId == request.auth.uid &&
+        esTextoValido(request.resource.data.nombre) &&
+        esMontoValido(request.resource.data.deudaTotal);
+
+      allow delete: if request.auth != null && resource.data.bodegaId == request.auth.uid;
     }
 
     // --- movements ---
     match /movements/{movementId} {
-      allow read: if true;
+      allow read: if request.auth != null && resource.data.bodegaId == request.auth.uid;
+
       allow create: if
+        request.auth != null &&
+        request.resource.data.bodegaId == request.auth.uid &&
         esMontoValido(request.resource.data.monto) &&
         request.resource.data.tipo in ['abono', 'cargo'];
+
       allow update: if
+        request.auth != null &&
+        resource.data.bodegaId == request.auth.uid &&
+        request.resource.data.bodegaId == request.auth.uid &&
         esMontoValido(request.resource.data.monto);
-      allow delete: if true;
+
+      allow delete: if request.auth != null && resource.data.bodegaId == request.auth.uid;
     }
 
     // --- users: perfil de la bodega (nombreBodega, nombreAdministrador) ---

@@ -1,5 +1,6 @@
 import { doc, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
 import { dbCloud } from './firebase'
+import { auth } from './authService'
 
 /**
  * Modelo "Cloud Directo": toda escritura de la app (ventas, abonos,
@@ -12,10 +13,39 @@ import { dbCloud } from './firebase'
  * función de acá puede rechazar (sin conexión, permisos, etc.); los
  * componentes que las llaman deben mostrarle ese error al bodeguero en
  * vez de guardar "en cola" para más tarde.
+ *
+ * MULTI-TENANT: cada documento que se CREA en `products`, `sales`,
+ * `customers` o `movements` lleva el campo `bodegaId` con el uid del
+ * usuario autenticado. `firestore.rules` exige que `bodegaId` en el
+ * documento coincida con `request.auth.uid` para poder leerlo o
+ * escribirlo, así que un documento creado sin este campo (o con el uid
+ * de otra bodega) sería rechazado por las reglas antes de llegar a
+ * guardarse.
  */
 
+/**
+ * Uid de la bodega (cuenta) actualmente autenticada. Lanza un error
+ * explícito si se llama sin sesión activa, en vez de dejar que
+ * Firestore falle más abajo con un mensaje de permisos genérico y
+ * difícil de diagnosticar — esta función nunca debería invocarse antes
+ * de iniciar sesión, porque toda la UI que llama a estas funciones vive
+ * detrás de AuthPage en App.jsx.
+ *
+ * @returns {string}
+ */
+function obtenerBodegaIdActual() {
+  const uid = auth.currentUser?.uid
+  if (!uid) {
+    throw new Error(
+      '[firestoreDataService] No hay sesión activa: no se puede escribir en Firestore sin bodegaId.'
+    )
+  }
+  return uid
+}
+
 export function crearProductoEnNube(producto) {
-  return setDoc(doc(dbCloud, 'products', producto.id), producto)
+  const bodegaId = obtenerBodegaIdActual()
+  return setDoc(doc(dbCloud, 'products', producto.id), { ...producto, bodegaId })
 }
 
 export function actualizarProductoEnNube(id, cambios) {
@@ -23,7 +53,8 @@ export function actualizarProductoEnNube(id, cambios) {
 }
 
 export function crearClienteEnNube(cliente) {
-  return setDoc(doc(dbCloud, 'customers', cliente.id), cliente)
+  const bodegaId = obtenerBodegaIdActual()
+  return setDoc(doc(dbCloud, 'customers', cliente.id), { ...cliente, bodegaId })
 }
 
 /**
@@ -58,16 +89,17 @@ export async function registrarVentaEnNube({
   movimientoFiado,
   clienteActualizado,
 }) {
+  const bodegaId = obtenerBodegaIdActual()
   const batch = writeBatch(dbCloud)
 
-  batch.set(doc(dbCloud, 'sales', venta.id), venta)
+  batch.set(doc(dbCloud, 'sales', venta.id), { ...venta, bodegaId })
 
   for (const { productId, nuevoStock } of itemsStock) {
     batch.update(doc(dbCloud, 'products', productId), { stock: nuevoStock })
   }
 
   if (movimientoFiado) {
-    batch.set(doc(dbCloud, 'movements', movimientoFiado.id), movimientoFiado)
+    batch.set(doc(dbCloud, 'movements', movimientoFiado.id), { ...movimientoFiado, bodegaId })
   }
 
   if (clienteActualizado) {
@@ -90,8 +122,9 @@ export async function registrarVentaEnNube({
  * @param {number} params.nuevaDeuda
  */
 export async function registrarAbonoEnNube({ movimiento, clienteId, nuevaDeuda }) {
+  const bodegaId = obtenerBodegaIdActual()
   const batch = writeBatch(dbCloud)
-  batch.set(doc(dbCloud, 'movements', movimiento.id), movimiento)
+  batch.set(doc(dbCloud, 'movements', movimiento.id), { ...movimiento, bodegaId })
   batch.update(doc(dbCloud, 'customers', clienteId), { deudaTotal: nuevaDeuda })
   await batch.commit()
 }

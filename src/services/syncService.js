@@ -1,4 +1,4 @@
-import { collection, onSnapshot } from 'firebase/firestore'
+import { collection, onSnapshot, query, where } from 'firebase/firestore'
 import { db } from '../db/dexie'
 import { dbCloud } from './firebase'
 
@@ -189,9 +189,26 @@ async function reemplazarTablaDeFormaAtomica(tablaLocal, coleccionRemota, snapsh
  * Cada página ya usa `useLiveQuery`, así que la UI se actualiza sola en
  * cuanto Dexie cambia — sin recargar, sin navegar a otra pantalla.
  *
+ * MULTI-TENANT: cada colección se consulta con
+ * `where('bodegaId', '==', bodegaId)`, así Dexie solo llega a poblarse
+ * con los documentos que pertenecen a la bodega autenticada. `bodegaId`
+ * se recibe como parámetro (en vez de leerlo de `auth.currentUser` acá
+ * adentro) para que el listener quede atado, desde el momento en que se
+ * crea, al uid con el que App.jsx decidió hidratar — sin depender de
+ * que `auth.currentUser` siga teniendo ese mismo valor más tarde (por
+ * ejemplo, si el usuario cierra sesión e inicia otra justo mientras un
+ * snapshot está en vuelo).
+ *
+ * @param {string} bodegaId - uid del usuario autenticado (bodega actual)
  * @returns {{ cancelarTodo: () => void, listoParaUsar: Promise<void[]> }}
  */
-export function iniciarSincronizacionEnTiempoReal() {
+export function iniciarSincronizacionEnTiempoReal(bodegaId) {
+  if (!bodegaId) {
+    throw new Error(
+      '[sync] iniciarSincronizacionEnTiempoReal() requiere un bodegaId (uid) para poder filtrar los listeners.'
+    )
+  }
+
   const cancelaciones = []
   const primerasCargas = []
 
@@ -205,8 +222,13 @@ export function iniciarSincronizacionEnTiempoReal() {
 
     let primeraCargaAplicada = false
 
-    const cancelar = onSnapshot(
+    const consultaFiltradaPorBodega = query(
       collection(dbCloud, coleccionRemota),
+      where('bodegaId', '==', bodegaId)
+    )
+
+    const cancelar = onSnapshot(
+      consultaFiltradaPorBodega,
       async (snapshot) => {
         try {
           if (!primeraCargaAplicada) {
