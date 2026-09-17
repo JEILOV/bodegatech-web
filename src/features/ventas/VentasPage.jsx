@@ -5,7 +5,7 @@ import { registrarVentaEnNube } from '../../services/firestoreDataService'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { ScannerModal } from './components/ScannerModal'
 import { CartItemList } from './components/CartItemList'
-import { SelectorClienteModal } from './components/SelectorClienteModal'
+import { SelectorClienteModal } from './components/SelectorClienteModal.jsx'
 
 const DENOMINACIONES_SUGERIDAS = [10, 20, 50]
 
