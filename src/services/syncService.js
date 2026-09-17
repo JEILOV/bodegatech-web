@@ -216,6 +216,18 @@ async function escribirEnLoteConResiliencia(tablaLocal, registros) {
  * (`synced: false`): esos no se tocan, para no perder un abono o una
  * venta hecha offline que todavía no llegó a Firestore.
  *
+ * RESET LIMPIO PREVIO (fix ConstraintError de `&codigoBarras`): antes de
+ * escribir el snapshot, se borran con `bulkDelete` todos los registros
+ * locales YA CONFIRMADOS (`synced !== false`). No usamos `tablaLocal.clear()`
+ * porque eso borraría también las ediciones pendientes de subir; en cambio
+ * calculamos el conjunto exacto de IDs a limpiar excluyendo los pendientes.
+ * Esto evita que un producto viejo (mismo `codigoBarras`, distinto id, o
+ * cualquier residuo de una sincronización anterior) siga ocupando el
+ * índice único cuando `bulkPut` intenta insertar la versión saneada que
+ * viene de Firestore. Como consecuencia, ya no hace falta un barrido de
+ * "huérfanos" al final: si un registro confirmado ya no vino en este
+ * snapshot, simplemente no se vuelve a escribir tras el borrado previo.
+ *
  * Antes de escribir, cada lote pasa por `sanearRegistros` (deduplica
  * `codigoBarras` en products) y luego por `escribirEnLoteConResiliencia`
  * (nunca deja un `Dexie.BulkError` sin manejar).
@@ -227,14 +239,25 @@ async function reemplazarTablaDeFormaAtomica(tablaLocal, coleccionRemota, snapsh
       registrosLocales.filter((registro) => registro.synced === false).map((r) => r.id)
     )
 
-    const idsRemotos = new Set()
+    // Reset limpio: borramos todo lo confirmado (synced !== false) antes
+    // de reinsertar el snapshot. Los pendientes (synced: false) quedan
+    // intactos porque están excluidos de este conjunto.
+    const idsAConservar = idsPendientes
+    const idsALimpiar = registrosLocales
+      .filter((registro) => !idsAConservar.has(registro.id))
+      .map((registro) => registro.id)
+
+    if (idsALimpiar.length > 0) {
+      await tablaLocal.bulkDelete(idsALimpiar)
+    }
+
     const registrosCrudos = []
 
     for (const documento of snapshot.docs) {
-      idsRemotos.add(documento.id)
       if (idsPendientes.has(documento.id)) {
         // Edición local sin subir todavía: la nube probablemente está
-        // desactualizada respecto a este registro. La dejamos tal cual.
+        // desactualizada respecto a este registro. La dejamos tal cual
+        // (ya sobrevivió al borrado de arriba, así que no se toca).
         continue
       }
       registrosCrudos.push({ ...documento.data(), id: documento.id, synced: true })
@@ -242,17 +265,6 @@ async function reemplazarTablaDeFormaAtomica(tablaLocal, coleccionRemota, snapsh
 
     const registrosParaEscribir = sanearRegistros(coleccionRemota, registrosCrudos)
     await escribirEnLoteConResiliencia(tablaLocal, registrosParaEscribir)
-
-    // Cualquier registro local YA sincronizado que ya no exista en la
-    // nube (borrado desde otro dispositivo mientras este estaba
-    // desconectado) se elimina para que ambos lados queden idénticos.
-    const idsAEliminar = registrosLocales
-      .filter((registro) => registro.synced !== false && !idsRemotos.has(registro.id))
-      .map((registro) => registro.id)
-
-    if (idsAEliminar.length > 0) {
-      await tablaLocal.bulkDelete(idsAEliminar)
-    }
   }).catch((error) => {
     console.error(`[sync] Error en el reemplazo atómico inicial de "${coleccionRemota}":`, error)
     throw error
