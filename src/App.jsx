@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { observarEstadoAuth, cerrarSesion } from './services/authService'
 import { iniciarSincronizacionEnTiempoReal } from './services/syncService'
-import { seedDatabase } from './db/seed'
-import { db, limpiarBaseDatosLocal } from './db/dexie'
+import { limpiarBaseDatosLocal } from './db/dexie'
 import { useBackableState } from './hooks/useBackableState'
 import { AuthPage } from './features/auth/AuthPage'
 import { HomeScreen } from './features/home/HomeScreen'
@@ -40,10 +39,10 @@ function App() {
   const [hidratandoNube, setHidratandoNube] = useState(true)
 
   // Evita relanzar toda la hidratación (y, con ella, el riesgo de tocar
-  // seedDatabase()/Dexie de nuevo) cuando Firebase Auth emite un usuario
-  // con la MISMA sesión pero una referencia de objeto distinta (por
-  // ejemplo al refrescar el ID token en segundo plano). Solo nos importa
-  // reaccionar cuando el UID realmente cambia (login/logout).
+  // Dexie de nuevo) cuando Firebase Auth emite un usuario con la MISMA
+  // sesión pero una referencia de objeto distinta (por ejemplo al
+  // refrescar el ID token en segundo plano). Solo nos importa reaccionar
+  // cuando el UID realmente cambia (login/logout).
   const uidHidratadoRef = useRef(null)
 
   // Guarda el UID de la última sesión que efectivamente llegó a
@@ -86,7 +85,7 @@ function App() {
 
     // Ya hidratamos esta misma sesión (mismo UID); un cambio de
     // referencia de `usuario` por refresco de token no debe volver a
-    // disparar seedDatabase() ni reabrir los listeners de Firestore.
+    // reabrir los listeners de Firestore.
     if (uidHidratadoRef.current === usuario.uid) {
       return
     }
@@ -119,36 +118,16 @@ function App() {
 
       // Esperamos la primera descarga real de cada colección (con un tope
       // de 4s si no hay internet ni caché local de Firestore disponible)
-      // antes de decidir si sembramos datos de demo. Así seedDatabase()
-      // nunca se ejecuta "encima" de una cuenta que ya tiene
-      // productos/clientes/ventas reales en la nube, y nunca tocamos
-      // Dexie antes de que Auth + la primera descarga de Firestore hayan
-      // terminado.
+      // antes de dejar pasar a HomeScreen. Ya NO se decide aquí si se
+      // siembran datos de demo: las cuentas nuevas quedan 100% vacías
+      // (0 productos, 0 clientes, 0 ventas) hasta que el bodeguero
+      // registre sus propios datos (ver db/seed.js).
       await Promise.race([
         listoParaUsar,
         new Promise((resolve) => setTimeout(resolve, TIEMPO_MAXIMO_ESPERA_NUBE_MS)),
       ])
 
       if (cancelado) return
-
-      const [totalProductos, totalClientes, totalVentas] = await Promise.all([
-        db.products.count(),
-        db.customers.count(),
-        db.sales.count(),
-      ])
-
-      // Solo sembramos si, después de intentar traer todo de Firestore,
-      // las 3 tablas siguen vacías: eso significa que es una cuenta
-      // genuinamente nueva, no un dispositivo nuevo de una cuenta existente.
-      // Si el usuario ya tenía sesión y datos (locales o recién bajados de
-      // la nube), seedDatabase() jamás se ejecuta.
-      if (totalProductos === 0 && totalClientes === 0 && totalVentas === 0) {
-        try {
-          await seedDatabase()
-        } catch (error) {
-          console.error('[seed] No se pudo completar la siembra inicial:', error)
-        }
-      }
 
       if (!cancelado) {
         uidHidratadoRef.current = usuario.uid

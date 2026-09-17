@@ -29,15 +29,14 @@ export function HomeScreen({ usuario, onCerrarSesion, onNuevaVenta, onVerFiados,
       : perfilBodega?.nombreBodega || usuario?.displayName || 'Mi Bodega'
 
   // Mismo patrón que en MetricsHeader: valor por defecto ([]) para que la
-  // sección nunca dependa de que la primera ejecución de la consulta
-  // coincida exactamente con el momento en que `seedDatabase()` terminó de
-  // insertar productos. Ahora que main.jsx espera la siembra antes de
-  // montar la app, esta consulta ya arranca con datos reales; el
-  // try/catch + default es una segunda capa de seguridad para que un
-  // error puntual no deje la sección "congelada". Al venir de Dexie, ya
-  // está filtrada por la bodega activa (ver syncService.js), y App.jsx
-  // remonta HomeScreen por completo (key={usuario.uid}) al cambiar de
-  // cuenta, así que este estado nunca arrastra datos de la sesión anterior.
+  // sección nunca quede "congelada" si una consulta puntual falla (ver
+  // try/catch). App.jsx ya espera la primera descarga de Firestore antes
+  // de montar esta pantalla, así que esta consulta arranca con datos
+  // reales (o genuinamente vacíos, si la cuenta es nueva — ya no hay
+  // siembra automática, ver db/seed.js). Al venir de Dexie, ya está
+  // filtrada por la bodega activa (ver syncService.js), y App.jsx remonta
+  // HomeScreen por completo (key={usuario.uid}) al cambiar de cuenta, así
+  // que este estado nunca arrastra datos de la sesión anterior.
   const productosStockBajo = useLiveQuery(
     async () => {
       try {
@@ -49,6 +48,24 @@ export function HomeScreen({ usuario, onCerrarSesion, onNuevaVenta, onVerFiados,
     },
     [],
     []
+  )
+
+  // Distingue "no hay NINGÚN producto registrado todavía" (cuenta nueva,
+  // 100% vacía) de "hay productos pero ninguno con stock bajo" (todo
+  // saludable). Sin esta consulta, una cuenta recién creada mostraría
+  // "Todo el inventario está en niveles saludables", lo cual es falso:
+  // no hay inventario que evaluar, simplemente no existe.
+  const totalProductos = useLiveQuery(
+    async () => {
+      try {
+        return await db.products.count()
+      } catch (error) {
+        console.error('[HomeScreen] Error contando productos:', error)
+        return 0
+      }
+    },
+    [],
+    0
   )
 
   return (
@@ -101,13 +118,19 @@ export function HomeScreen({ usuario, onCerrarSesion, onNuevaVenta, onVerFiados,
             Alertas de stock bajo
           </h2>
 
-          {productosStockBajo.length === 0 && (
+          {totalProductos === 0 && (
+            <p className="text-sm text-dark-text-muted">
+              No hay productos registrados aún.
+            </p>
+          )}
+
+          {totalProductos > 0 && productosStockBajo.length === 0 && (
             <p className="text-sm text-dark-text-muted">
               Todo el inventario está en niveles saludables.
             </p>
           )}
 
-          {productosStockBajo.length > 0 && (
+          {totalProductos > 0 && productosStockBajo.length > 0 && (
             <ul className="space-y-2">
               {productosStockBajo.map((producto) => (
                 <li
