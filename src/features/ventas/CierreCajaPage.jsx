@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/dexie'
 import { formatCurrency } from '../../utils/formatCurrency'
+import { obtenerInfoMetodoPago } from '../../utils/metodoPago'
+import { DetalleVentaModal } from './components/DetalleVentaModal'
 
 /** Convierte un objeto Date a formato "YYYY-MM-DD" (el que usan los <input type="date">). */
 function formatearInputDate(fecha) {
@@ -20,6 +22,20 @@ function formatearFechaHora(fechaISO) {
   const horas = String(fecha.getHours()).padStart(2, '0')
   const minutos = String(fecha.getMinutes()).padStart(2, '0')
   return `${dia}/${mes}/${anio} - ${horas}:${minutos}`
+}
+
+/**
+ * Resumen breve de los productos de una venta, para la tarjeta de la
+ * lista (ej. "2 productos: Aceite Primor 1L, Inka Kola..."). Muestra los
+ * nombres de los primeros 2 ítems y agrega "..." si hay más.
+ */
+function resumirItems(items) {
+  if (!items || items.length === 0) return 'Sin productos'
+  const cantidad = items.length
+  const etiquetaCantidad = `${cantidad} producto${cantidad === 1 ? '' : 's'}`
+  const nombres = items.slice(0, 2).map((item) => item.nombre)
+  const sufijo = cantidad > 2 ? '...' : ''
+  return `${etiquetaCantidad}: ${nombres.join(', ')}${sufijo}`
 }
 
 const HOY = new Date()
@@ -62,6 +78,17 @@ export function CierreCajaPage({ onVolver }) {
   const [fechaInicio, setFechaInicio] = useState(() => formatearInputDate(HOY))
   const [fechaFin, setFechaFin] = useState(() => formatearInputDate(HOY))
   const [cierre, setCierre] = useState(null)
+  const [ventaSeleccionada, setVentaSeleccionada] = useState(null)
+
+  const clientes = useLiveQuery(() => db.customers.toArray(), [])
+
+  const nombrePorClienteId = useMemo(() => {
+    const mapa = {}
+    for (const cliente of clientes || []) {
+      mapa[cliente.id] = cliente.nombre
+    }
+    return mapa
+  }, [clientes])
 
   function aplicarFiltroRapido(clave) {
     const { fechaInicio: inicio, fechaFin: fin } = FILTROS_RAPIDOS[clave]()
@@ -292,32 +319,67 @@ export function CierreCajaPage({ onVolver }) {
           )}
 
           {datos?.ventas.length > 0 && (
-            <ul className="divide-y divide-slate-100 max-h-96 overflow-y-auto -mx-1">
-              {datos.ventas.map((venta) => (
-                <li key={venta.id} className="flex items-center justify-between gap-3 px-1 py-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-dark-text truncate">
-                      {formatearFechaHora(venta.fecha)}
-                    </p>
-                    <span
-                      className={`inline-block mt-1 text-xs font-bold px-2 py-0.5 rounded-full ${
-                        venta.tipoPago === 'efectivo'
-                          ? 'bg-success/10 text-success'
-                          : 'bg-warning/10 text-warning'
-                      }`}
+            // Mobile-first: una columna con áreas de toque amplias. Desde
+            // `sm:` en adelante (tablet/PC) pasa a 2 columnas con más
+            // espaciado, sin perder legibilidad ni resolución.
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[32rem] overflow-y-auto p-0.5 -m-0.5">
+              {datos.ventas.map((venta) => {
+                const infoMetodoPago = obtenerInfoMetodoPago(venta.tipoPago)
+                const nombreCliente =
+                  venta.tipoPago === 'fiado'
+                    ? nombrePorClienteId[venta.clienteId] || 'Cliente eliminado'
+                    : 'Cliente general'
+
+                return (
+                  <li key={venta.id}>
+                    <button
+                      onClick={() => setVentaSeleccionada(venta)}
+                      className="w-full text-left bg-white border border-slate-200 rounded-xl p-3.5
+                                 flex flex-col gap-1.5 active:scale-[0.98] hover:border-primary/40
+                                 hover:shadow-sm transition-all duration-100"
                     >
-                      {venta.tipoPago === 'efectivo' ? '💵 Efectivo' : '📒 Fiado'}
-                    </span>
-                  </div>
-                  <span className="text-base font-bold text-dark-text whitespace-nowrap">
-                    {formatCurrency(venta.total)}
-                  </span>
-                </li>
-              ))}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-dark-text truncate">
+                            {formatearFechaHora(venta.fecha)}
+                          </p>
+                          <span
+                            className={`inline-flex items-center gap-1 mt-1 text-xs font-bold px-2 py-0.5 rounded-full ${infoMetodoPago.clases}`}
+                          >
+                            {infoMetodoPago.icono} {infoMetodoPago.etiqueta}
+                          </span>
+                        </div>
+                        <span className="text-base font-bold text-dark-text whitespace-nowrap flex-shrink-0">
+                          {formatCurrency(venta.total)}
+                        </span>
+                      </div>
+
+                      <p className="text-xs font-medium text-dark-text-muted truncate">
+                        {nombreCliente}
+                      </p>
+                      <p className="text-xs text-dark-text-muted truncate">
+                        {resumirItems(venta.items)}
+                      </p>
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </section>
       </main>
+
+      {ventaSeleccionada && (
+        <DetalleVentaModal
+          venta={ventaSeleccionada}
+          clienteNombre={
+            ventaSeleccionada.tipoPago === 'fiado'
+              ? nombrePorClienteId[ventaSeleccionada.clienteId] || 'Cliente eliminado'
+              : null
+          }
+          onCerrar={() => setVentaSeleccionada(null)}
+        />
+      )}
     </div>
   )
 }
