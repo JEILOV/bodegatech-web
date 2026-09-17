@@ -253,4 +253,4 @@ export function EntradaMercaderiaModal({ onCerrar, onProductoNoEncontrado }) {
   )
 }
 
-export default EntradaMercaderiaModale
+export default EntradaMercaderiaModal
