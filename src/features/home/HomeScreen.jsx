@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/dexie'
 import { MetricsHeader } from './components/MetricsHeader'
 import { QuickActions } from './components/QuickActions'
+import { CloudStatusPanel } from './components/CloudStatusPanel'
 
 const STOCK_BAJO_UMBRAL = 5
 
@@ -71,6 +72,8 @@ export function HomeScreen({ onNuevaVenta, onVerFiados, onVerInventario, onVerCi
           )}
         </section>
       </main>
+
+      <CloudStatusPanel />
     </div>
   )
 }

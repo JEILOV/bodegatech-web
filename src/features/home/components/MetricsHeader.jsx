@@ -1,18 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../db/dexie'
 import { formatCurrency } from '../../../utils/formatCurrency'
-
-/**
- * Devuelve el rango [inicioDeHoy, finDeHoy] en formato ISO
- * para filtrar ventas del día actual.
- */
-function obtenerRangoDeHoy() {
-  const ahora = new Date()
-  const inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate())
-  const fin = new Date(inicio)
-  fin.setDate(fin.getDate() + 1)
-  return { inicio: inicio.toISOString(), fin: fin.toISOString() }
-}
+import { obtenerRangoDeHoy } from '../../../utils/fechas'
 
 export function MetricsHeader() {
   // OJO: este componente solo se monta cuando App.jsx ya bajó la pantalla
