@@ -1,10 +1,23 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>bodegatech-web</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- PWA instalable: manifest para Android (banner/menú "Instalar app") -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#1D4ED8" />
+
+    <!-- iOS/Safari no lee el manifest para "Agregar a inicio": usa estas
+         meta tags + apple-touch-icon en su lugar. -->
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Don Pedro POS" />
+
+    <meta name="description" content="Punto de venta, inventario y fiados para Bodega Don Pedro." />
+    <title>Bodega Don Pedro POS</title>
   </head>
   <body>
     <div id="root"></div>

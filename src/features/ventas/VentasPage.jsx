@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/dexie'
 import { registrarVentaEnNube } from '../../services/firestoreDataService'
 import { formatCurrency } from '../../utils/formatCurrency'
+import { obtenerInfoMetodoPago } from '../../utils/metodoPago'
 import { useBackableState } from '../../hooks/useBackableState'
 import { ScannerModal } from './components/ScannerModal'
 import { CartItemList } from './components/CartItemList'
@@ -15,7 +16,7 @@ export function VentasPage({ onVentaFinalizada }) {
   const [busqueda, setBusqueda] = useState('')
   const [carrito, setCarrito] = useState([])
   const [mostrarScanner, setMostrarScanner] = useState(false)
-  const [modoPago, setModoPago] = useState(null) // 'efectivo' | 'fiado' | null
+  const [modoPago, setModoPago] = useState(null) // 'efectivo' | 'yape' | 'fiado' | null
   const [montoRecibido, setMontoRecibido] = useState(0)
   const [clienteSeleccionadoId, setClienteSeleccionadoId] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -54,6 +55,7 @@ export function VentasPage({ onVentaFinalizada }) {
   )
 
   const vuelto = modoPago === 'efectivo' ? Math.max(montoRecibido - total, 0) : 0
+  const infoYape = obtenerInfoMetodoPago('yape')
 
   function agregarProductoAlCarrito(producto) {
     // Producto a granel: nunca se agrega directo con cantidad 1 (no tiene
@@ -233,7 +235,10 @@ export function VentasPage({ onVentaFinalizada }) {
       }
 
       // Cloud Directo: la venta, el descuento de stock y (si aplica) el
-      // cargo al fiado se escriben JUNTOS y directo en Firestore.
+      // cargo al fiado se escriben JUNTOS y directo en Firestore. Con
+      // Yape/Plin no hay cargo a un cliente ni cambio que calcular: la
+      // venta simplemente se registra con tipoPago: 'yape' para que el
+      // Cierre de Caja la totalice por separado del efectivo.
       await registrarVentaEnNube({
         venta: {
           id: ventaId,
@@ -343,10 +348,10 @@ export function VentasPage({ onVentaFinalizada }) {
               <span className="text-2xl font-bold text-dark-text">{formatCurrency(total)}</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => setModoPago('efectivo')}
-                className={`py-3 rounded-xl font-semibold border ${
+                className={`py-3 rounded-xl font-semibold border text-sm ${
                   modoPago === 'efectivo'
                     ? 'bg-success text-white border-success'
                     : 'bg-white text-dark-text border-slate-200'
@@ -355,8 +360,18 @@ export function VentasPage({ onVentaFinalizada }) {
                 💵 Efectivo
               </button>
               <button
+                onClick={() => setModoPago('yape')}
+                className={`py-3 rounded-xl font-semibold border text-sm ${
+                  modoPago === 'yape'
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : 'bg-white text-dark-text border-slate-200'
+                }`}
+              >
+                {infoYape.icono} Yape / Plin
+              </button>
+              <button
                 onClick={() => setModoPago('fiado')}
-                className={`py-3 rounded-xl font-semibold border ${
+                className={`py-3 rounded-xl font-semibold border text-sm ${
                   modoPago === 'fiado'
                     ? 'bg-warning text-white border-warning'
                     : 'bg-white text-dark-text border-slate-200'
@@ -365,6 +380,13 @@ export function VentasPage({ onVentaFinalizada }) {
                 📒 Fiado
               </button>
             </div>
+
+            {modoPago === 'yape' && (
+              <div className={`flex items-center gap-2 rounded-lg px-3 py-3 text-sm font-medium ${infoYape.clases}`}>
+                <span className="text-lg leading-none">{infoYape.icono}</span>
+                Confirma cuando veas la notificación de pago en tu app de Yape o Plin.
+              </div>
+            )}
 
             {modoPago === 'efectivo' && (
               <div className="space-y-2 pt-2">

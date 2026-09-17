@@ -5,6 +5,7 @@ import { formatCurrency } from '../../utils/formatCurrency'
 import { obtenerInfoMetodoPago } from '../../utils/metodoPago'
 import { formatearCantidadItem } from '../../utils/granel'
 import { useBackableState } from '../../hooks/useBackableState'
+import { descargarCsvCierreDeCaja } from '../../utils/exportarVentasCsv'
 import { DetalleVentaModal } from './components/DetalleVentaModal'
 
 /** Convierte un objeto Date a formato "YYYY-MM-DD" (el que usan los <input type="date">). */
@@ -114,7 +115,7 @@ export function CierreCajaPage({ onVolver }) {
   const esRangoValido = fechaInicio && fechaFin && fechaInicio <= fechaFin
 
   const datos = useLiveQuery(async () => {
-    if (!esRangoValido) return { ventas: [], totalEfectivo: 0, totalFiado: 0, totalGeneral: 0 }
+    if (!esRangoValido) return { ventas: [], totalEfectivo: 0, totalYape: 0, totalFiado: 0, totalGeneral: 0 }
 
     const { inicio, fin } = obtenerRangoISO(fechaInicio, fechaFin)
     const ventas = await db.sales.where('fecha').between(inicio, fin, true, true).toArray()
@@ -126,13 +127,15 @@ export function CierreCajaPage({ onVolver }) {
       (acumulado, venta) => {
         if (venta.tipoPago === 'efectivo') {
           acumulado.totalEfectivo += venta.total
+        } else if (venta.tipoPago === 'yape') {
+          acumulado.totalYape += venta.total
         } else if (venta.tipoPago === 'fiado') {
           acumulado.totalFiado += venta.total
         }
         acumulado.totalGeneral += venta.total
         return acumulado
       },
-      { totalEfectivo: 0, totalFiado: 0, totalGeneral: 0 }
+      { totalEfectivo: 0, totalYape: 0, totalFiado: 0, totalGeneral: 0 }
     )
 
     return { ventas, ...totales }
@@ -152,11 +155,23 @@ export function CierreCajaPage({ onVolver }) {
     if (!datos) return
     setCierre({
       totalEfectivo: datos.totalEfectivo,
+      totalYape: datos.totalYape,
       totalFiado: datos.totalFiado,
       totalGeneral: datos.totalGeneral,
       cantidadVentas: datos.ventas.length,
       hora: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
     })
+  }
+
+  /**
+   * Exporta a CSV el mismo listado de ventas que se ve en "Detalle de
+   * ventas" para el rango de fechas actualmente seleccionado (Fecha,
+   * Hora, Método de Pago, Cliente, Ítems Vendidos y Monto Total). Todo
+   * ocurre en el navegador: no hay backend ni request adicional.
+   */
+  function exportarCierre() {
+    if (!datos || datos.ventas.length === 0) return
+    descargarCsvCierreDeCaja(datos.ventas, nombrePorClienteId, { fechaInicio, fechaFin })
   }
 
   return (
@@ -165,7 +180,17 @@ export function CierreCajaPage({ onVolver }) {
         <button onClick={onVolver} className="text-white text-xl">
           ←
         </button>
-        <h1 className="text-white font-bold text-lg">Reporte de Ventas</h1>
+        <h1 className="text-white font-bold text-lg flex-1">Reporte de Ventas</h1>
+        <button
+          onClick={exportarCierre}
+          disabled={!datos || datos.ventas.length === 0}
+          className="flex items-center gap-1.5 bg-white/15 text-white text-sm font-semibold
+                     px-3 py-2 rounded-lg active:scale-95 transition-transform duration-100
+                     disabled:opacity-40 disabled:active:scale-100"
+        >
+          <span className="text-base leading-none">📊⬇️</span>
+          Exportar
+        </button>
       </header>
 
       <main className="px-4 pt-4 space-y-4">
@@ -241,6 +266,13 @@ export function CierreCajaPage({ onVolver }) {
                 </span>
               </div>
 
+              <div className="flex items-center justify-between bg-purple-50 rounded-lg px-3 py-3">
+                <span className="text-sm font-medium text-dark-text">📱 Total Yape / Plin</span>
+                <span className="text-lg font-bold text-purple-700">
+                  {formatCurrency(datos.totalYape)}
+                </span>
+              </div>
+
               <div className="flex items-center justify-between bg-warning/10 rounded-lg px-3 py-3">
                 <span className="text-sm font-medium text-dark-text">📒 Total fiado</span>
                 <span className="text-lg font-bold text-warning">
@@ -295,11 +327,15 @@ export function CierreCajaPage({ onVolver }) {
                 </div>
 
                 <p className="text-sm text-dark-text-muted">
-                  Adicionalmente, hoy se fiaron{' '}
+                  Adicionalmente, hoy se cobró{' '}
+                  <span className="font-bold text-purple-700">
+                    {formatCurrency(cierre.totalYape)}
+                  </span>{' '}
+                  por Yape/Plin (no es efectivo, no está en el cajón) y se fiaron{' '}
                   <span className="font-bold text-warning">
                     {formatCurrency(cierre.totalFiado)}
                   </span>{' '}
-                  (dinero pendiente de cobro, no está en el cajón).
+                  (dinero pendiente de cobro, tampoco está en el cajón).
                 </p>
 
                 <button
