@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { observarEstadoAuth, cerrarSesion } from './services/authService'
 import { iniciarSincronizacionEnTiempoReal } from './services/syncService'
 import { seedDatabase } from './db/seed'
-import { db } from './db/dexie'
+import { db, limpiarBaseDatosLocal } from './db/dexie'
 import { useBackableState } from './hooks/useBackableState'
 import { AuthPage } from './features/auth/AuthPage'
 import { HomeScreen } from './features/home/HomeScreen'
@@ -46,6 +46,15 @@ function App() {
   // reaccionar cuando el UID realmente cambia (login/logout).
   const uidHidratadoRef = useRef(null)
 
+  // Guarda el UID de la última sesión que efectivamente llegó a
+  // hidratarse, para poder distinguir "cambio real de cuenta" (uid
+  // anterior != null y distinto del nuevo) de un primer login (uid
+  // anterior === null). Es independiente de `uidHidratadoRef`: ese se
+  // resetea a null en cada logout, mientras que este conserva el último
+  // uid conocido incluso mientras `usuario` es null, para poder
+  // comparar en cuanto llega el siguiente.
+  const uidAnteriorRef = useRef(null)
+
   // Navegación resiliente al botón/gesto "Atrás" nativo del celular:
   // cada vez que `pantalla` deja de ser 'home' (Ventas, Inventario,
   // Fiados, Cierre de Caja), se agrega una entrada al historial del
@@ -88,6 +97,23 @@ function App() {
     async function hidratarYSuscribirse() {
       setHidratandoNube(true)
 
+      // Red de seguridad ADEMÁS de la limpieza que ya hace authService
+      // (login/registro/logout): si el uid que estamos por hidratar es
+      // distinto al último que esta pestaña hidrató (cambio real de
+      // cuenta, no un primer login ni un refresco de token), forzamos
+      // igual `limpiarBaseDatosLocal()` antes de reabrir los listeners.
+      // Así, aunque el borrado de authService no haya corrido en esta
+      // pestaña (por ejemplo, sesión cerrada/iniciada desde otra
+      // pestaña/dispositivo), nunca se reabren los listeners de
+      // syncService.js sobre una tabla que todavía tenga datos de la
+      // cuenta anterior.
+      const esCambioRealDeCuenta =
+        uidAnteriorRef.current !== null && uidAnteriorRef.current !== usuario.uid
+
+      if (esCambioRealDeCuenta) {
+        await limpiarBaseDatosLocal()
+      }
+
       const { cancelarTodo, listoParaUsar } = iniciarSincronizacionEnTiempoReal()
       detenerSincronizacion = cancelarTodo
 
@@ -126,6 +152,7 @@ function App() {
 
       if (!cancelado) {
         uidHidratadoRef.current = usuario.uid
+        uidAnteriorRef.current = usuario.uid
         setHidratandoNube(false)
       }
     }

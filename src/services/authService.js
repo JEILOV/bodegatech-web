@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import firebaseApp, { dbCloud } from './firebase'
+import { limpiarBaseDatosLocal } from '../db/dexie'
 
 /**
  * Instancia de Firebase Auth, basada en la misma app inicializada
@@ -25,6 +26,11 @@ export const auth = getAuth(firebaseApp)
  * @returns {Promise<import('firebase/auth').UserCredential>}
  */
 export async function loginUsuario(email, password) {
+  // Se limpia el caché local ANTES de autenticar para que, si la sesión
+  // anterior era de otra cuenta, el nuevo usuario nunca llegue a ver (ni
+  // por un instante, ni offline) productos/ventas/clientes ajenos
+  // mientras espera el primer snapshot de Firestore.
+  await limpiarBaseDatosLocal()
   return signInWithEmailAndPassword(auth, email.trim(), password)
 }
 
@@ -41,6 +47,10 @@ export async function loginUsuario(email, password) {
  * @returns {Promise<import('firebase/auth').UserCredential>}
  */
 export async function registrarUsuario({ nombreBodega, nombreAdministrador, email, password }) {
+  // Mismo motivo que en loginUsuario(): garantizar tablas locales vacías
+  // antes de que la cuenta nueva empiece a sincronizar desde Firestore.
+  await limpiarBaseDatosLocal()
+
   const credencial = await createUserWithEmailAndPassword(auth, email.trim(), password)
 
   await updateProfile(credencial.user, { displayName: nombreAdministrador.trim() })
@@ -63,6 +73,11 @@ export async function registrarUsuario({ nombreBodega, nombreAdministrador, emai
  * Cierra la sesión activa del usuario actual.
  */
 export async function cerrarSesion() {
+  // Se limpia ANTES de cerrar sesión: en cuanto signOut() resuelve,
+  // App.jsx muestra AuthPage, pero si otra pestaña/dispositivo llega a
+  // leer Dexie en el medio, no debe encontrar datos de la cuenta que se
+  // está cerrando.
+  await limpiarBaseDatosLocal()
   return signOut(auth)
 }
 
