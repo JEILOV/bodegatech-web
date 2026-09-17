@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { crearClienteEnNube } from '../../../services/firestoreDataService'
+import { IconCerrar } from '../../home/NavIcons'
 
 export function NuevoClienteModal({ onCerrar, onClienteCreado }) {
   const [nombre, setNombre] = useState('')
@@ -33,42 +34,56 @@ export function NuevoClienteModal({ onCerrar, onClienteCreado }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center px-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-dark-text text-lg">Nuevo cliente</h3>
-          <button onClick={onCerrar} className="text-dark-text-muted text-xl font-bold px-2">
-            ✕
+      <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
+        {/* Encabezado con gradiente, en sintonía con AuthPage/HomeScreen */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 to-purple-600 px-5 py-4 flex items-center justify-between">
+          <div className="absolute -top-8 -right-8 w-28 h-28 bg-white/10 rounded-full blur-2xl" />
+          <h3 className="relative font-bold text-white text-lg">Nuevo cliente</h3>
+          <button
+            onClick={onCerrar}
+            className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white
+                       hover:bg-white/25 active:scale-90 transition-all duration-150"
+          >
+            <IconCerrar className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-medium text-dark-text-muted">Nombre</label>
-            <input
-              type="text"
-              value={nombre}
-              onChange={(evento) => setNombre(evento.target.value)}
-              placeholder="Ej: Juan Pérez"
-              className="input-field mt-1"
-              autoFocus
-            />
+        <div className="p-5 space-y-4">
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-dark-text-muted">Nombre</label>
+              <input
+                type="text"
+                value={nombre}
+                onChange={(evento) => setNombre(evento.target.value)}
+                placeholder="Ej: Juan Pérez"
+                className="input-field mt-1"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-dark-text-muted">Teléfono (opcional)</label>
+              <input
+                type="tel"
+                value={telefono}
+                onChange={(evento) => setTelefono(evento.target.value)}
+                placeholder="Ej: 987654321"
+                className="input-field mt-1"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="text-xs font-medium text-dark-text-muted">Teléfono (opcional)</label>
-            <input
-              type="tel"
-              value={telefono}
-              onChange={(evento) => setTelefono(evento.target.value)}
-              placeholder="Ej: 987654321"
-              className="input-field mt-1"
-            />
-          </div>
+          <button
+            onClick={manejarGuardar}
+            disabled={guardando}
+            className="w-full bg-gradient-to-r from-primary-600 to-purple-600 text-white font-semibold py-3.5
+                       rounded-xl shadow-md shadow-primary-600/20 active:scale-95 transition-all duration-150
+                       disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {guardando ? 'Guardando...' : 'Guardar cliente'}
+          </button>
         </div>
-
-        <button onClick={manejarGuardar} disabled={guardando} className="btn-primary w-full">
-          {guardando ? 'Guardando...' : 'Guardar cliente'}
-        </button>
       </div>
     </div>
   )

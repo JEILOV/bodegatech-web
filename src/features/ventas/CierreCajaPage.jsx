@@ -7,6 +7,7 @@ import { formatearCantidadItem } from '../../utils/granel'
 import { useBackableState } from '../../hooks/useBackableState'
 import { descargarCsvCierreDeCaja } from '../../utils/exportarVentasCsv'
 import { DetalleVentaModal } from './components/DetalleVentaModal'
+import { IconCalculadora, IconDescargar, IconCheckCirculo } from '../home/NavIcons'
 
 /** Convierte un objeto Date a formato "YYYY-MM-DD" (el que usan los <input type="date">). */
 function formatearInputDate(fecha) {
@@ -176,81 +177,99 @@ export function CierreCajaPage({ onVolver }) {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-10">
-      <header className="bg-primary px-5 py-5 flex items-center gap-3">
-        <button onClick={onVolver} className="text-white text-xl">
-          ←
-        </button>
-        <h1 className="text-white font-bold text-lg flex-1">Reporte de Ventas</h1>
-        <button
-          onClick={exportarCierre}
-          disabled={!datos || datos.ventas.length === 0}
-          className="flex items-center gap-1.5 bg-white/15 text-white text-sm font-semibold
-                     px-3 py-2 rounded-lg active:scale-95 transition-transform duration-100
-                     disabled:opacity-40 disabled:active:scale-100"
-        >
-          <span className="text-base leading-none">📊⬇️</span>
-          Exportar
-        </button>
+      {/* Encabezado premium: gradiente azul/morado, en sintonía con AuthPage/HomeScreen */}
+      <header className="relative overflow-hidden bg-gradient-to-br from-primary-600 to-purple-600 px-5 pt-8 pb-7 rounded-b-3xl shadow-lg shadow-primary-600/20">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+        <div className="relative flex items-center gap-3">
+          <button
+            onClick={onVolver}
+            aria-label="Volver"
+            className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white
+                       active:scale-90 transition-transform duration-100 hover:bg-white/25"
+          >
+            <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
+              <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
+              <IconCalculadora className="w-5 h-5" />
+            </span>
+            <h1 className="text-white font-bold text-lg truncate">Reporte de Ventas</h1>
+          </div>
+          <button
+            onClick={exportarCierre}
+            disabled={!datos || datos.ventas.length === 0}
+            className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold
+                       px-3 py-2 rounded-xl active:scale-95 transition-all duration-150
+                       disabled:opacity-40 disabled:active:scale-100 shrink-0"
+          >
+            <IconDescargar className="w-4 h-4" />
+            Exportar
+          </button>
+        </div>
       </header>
 
-      <main className="px-4 pt-4 space-y-4">
+      <main className="px-4 -mt-4 space-y-4">
         {/* Filtros rápidos */}
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { clave: 'hoy', etiqueta: 'Hoy' },
-            { clave: 'semana', etiqueta: 'Esta Semana' },
-            { clave: 'mes', etiqueta: 'Este Mes' },
-          ].map((opcion) => (
-            <button
-              key={opcion.clave}
-              onClick={() => aplicarFiltroRapido(opcion.clave)}
-              className={`py-3 rounded-xl font-semibold text-sm border transition-colors ${
-                filtroRapidoActivo === opcion.clave
-                  ? 'bg-primary text-white border-primary'
-                  : 'bg-white text-dark-text border-slate-200'
-              }`}
-            >
-              {opcion.etiqueta}
-            </button>
-          ))}
+        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-4 space-y-4">
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { clave: 'hoy', etiqueta: 'Hoy' },
+              { clave: 'semana', etiqueta: 'Esta Semana' },
+              { clave: 'mes', etiqueta: 'Este Mes' },
+            ].map((opcion) => (
+              <button
+                key={opcion.clave}
+                onClick={() => aplicarFiltroRapido(opcion.clave)}
+                className={`py-2.5 rounded-xl font-semibold text-sm border transition-all duration-150 ${
+                  filtroRapidoActivo === opcion.clave
+                    ? 'bg-gradient-to-r from-primary-600 to-purple-600 text-white border-transparent shadow-sm'
+                    : 'bg-white text-dark-text border-slate-200 hover:border-primary-200'
+                }`}
+              >
+                {opcion.etiqueta}
+              </button>
+            ))}
+          </div>
+
+          {/* Calendario libre */}
+          <div className="space-y-2 pt-1 border-t border-slate-100">
+            <h2 className="text-xs font-bold text-dark-text-muted uppercase tracking-wide pt-2">
+              Rango de fechas
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-dark-text-muted mb-1 block">Fecha inicio</label>
+                <input
+                  type="date"
+                  value={fechaInicio}
+                  max={fechaFin}
+                  onChange={(evento) => manejarCambioFecha(setFechaInicio, evento.target.value)}
+                  className="input-field text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-dark-text-muted mb-1 block">Fecha fin</label>
+                <input
+                  type="date"
+                  value={fechaFin}
+                  min={fechaInicio}
+                  onChange={(evento) => manejarCambioFecha(setFechaFin, evento.target.value)}
+                  className="input-field text-sm"
+                />
+              </div>
+            </div>
+            {!esRangoValido && (
+              <p className="text-xs text-warning-600 font-medium">
+                La fecha de inicio no puede ser posterior a la fecha fin.
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Calendario libre */}
-        <section className="card space-y-3">
-          <h2 className="text-sm font-bold text-dark-text uppercase tracking-wide">
-            Rango de fechas
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-dark-text-muted mb-1 block">Fecha inicio</label>
-              <input
-                type="date"
-                value={fechaInicio}
-                max={fechaFin}
-                onChange={(evento) => manejarCambioFecha(setFechaInicio, evento.target.value)}
-                className="input-field text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-dark-text-muted mb-1 block">Fecha fin</label>
-              <input
-                type="date"
-                value={fechaFin}
-                min={fechaInicio}
-                onChange={(evento) => manejarCambioFecha(setFechaFin, evento.target.value)}
-                className="input-field text-sm"
-              />
-            </div>
-          </div>
-          {!esRangoValido && (
-            <p className="text-xs text-warning font-medium">
-              La fecha de inicio no puede ser posterior a la fecha fin.
-            </p>
-          )}
-        </section>
-
         {/* Totales del periodo */}
-        <section className="card space-y-3">
+        <section className="rounded-2xl bg-white border border-slate-100 shadow-sm p-4 space-y-3">
           <h2 className="text-sm font-bold text-dark-text uppercase tracking-wide">
             Resumen del periodo
           </h2>
@@ -259,23 +278,23 @@ export function CierreCajaPage({ onVolver }) {
 
           {datos !== undefined && (
             <>
-              <div className="flex items-center justify-between bg-success/10 rounded-lg px-3 py-3">
-                <span className="text-sm font-medium text-dark-text">💵 Total en efectivo</span>
-                <span className="text-lg font-bold text-success">
+              <div className="flex items-center justify-between bg-success-50 rounded-xl px-3.5 py-3">
+                <span className="text-sm font-medium text-dark-text">Total en efectivo</span>
+                <span className="text-lg font-bold text-success-600">
                   {formatCurrency(datos.totalEfectivo)}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between bg-purple-50 rounded-lg px-3 py-3">
-                <span className="text-sm font-medium text-dark-text">📱 Total Yape / Plin</span>
+              <div className="flex items-center justify-between bg-purple-50 rounded-xl px-3.5 py-3">
+                <span className="text-sm font-medium text-dark-text">Total Yape / Plin</span>
                 <span className="text-lg font-bold text-purple-700">
                   {formatCurrency(datos.totalYape)}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between bg-warning/10 rounded-lg px-3 py-3">
-                <span className="text-sm font-medium text-dark-text">📒 Total fiado</span>
-                <span className="text-lg font-bold text-warning">
+              <div className="flex items-center justify-between bg-warning-50 rounded-xl px-3.5 py-3">
+                <span className="text-sm font-medium text-dark-text">Total fiado</span>
+                <span className="text-lg font-bold text-warning-600">
                   {formatCurrency(datos.totalFiado)}
                 </span>
               </div>
@@ -300,28 +319,33 @@ export function CierreCajaPage({ onVolver }) {
               <button
                 onClick={realizarCierreDeCaja}
                 disabled={!datos}
-                className="btn-primary w-full text-lg flex items-center justify-center gap-2"
+                className="w-full text-base flex items-center justify-center gap-2 rounded-2xl
+                           bg-gradient-to-r from-primary-600 to-purple-600 text-white font-bold py-4
+                           shadow-lg shadow-primary-600/25 active:scale-[0.98] transition-all duration-150
+                           disabled:opacity-50 disabled:pointer-events-none"
               >
-                🧮 Realizar Cierre de Caja
+                <IconCalculadora className="w-5 h-5" />
+                Realizar Cierre de Caja
               </button>
             )}
 
             {cierre && (
-              <div className="card border-2 border-primary space-y-3">
+              <div className="rounded-2xl bg-white border-2 border-primary-500 shadow-sm p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-dark-text uppercase tracking-wide">
                     Cierre de caja — {cierre.hora}
                   </h3>
-                  <span className="text-xs font-semibold text-success bg-success/10 px-2 py-1 rounded-full">
+                  <span className="flex items-center gap-1 text-xs font-semibold text-success-600 bg-success-50 px-2 py-1 rounded-full">
+                    <IconCheckCirculo className="w-3.5 h-3.5" />
                     Realizado
                   </span>
                 </div>
 
-                <div className="bg-primary/5 rounded-xl p-4 space-y-1">
+                <div className="bg-primary-50 rounded-xl p-4 space-y-1">
                   <p className="text-xs text-dark-text-muted">
                     Dinero físico que debería haber en el cajón
                   </p>
-                  <p className="text-3xl font-bold text-primary">
+                  <p className="text-3xl font-bold text-primary-600">
                     {formatCurrency(cierre.totalEfectivo)}
                   </p>
                 </div>
@@ -332,7 +356,7 @@ export function CierreCajaPage({ onVolver }) {
                     {formatCurrency(cierre.totalYape)}
                   </span>{' '}
                   por Yape/Plin (no es efectivo, no está en el cajón) y se fiaron{' '}
-                  <span className="font-bold text-warning">
+                  <span className="font-bold text-warning-600">
                     {formatCurrency(cierre.totalFiado)}
                   </span>{' '}
                   (dinero pendiente de cobro, tampoco está en el cajón).
@@ -350,7 +374,7 @@ export function CierreCajaPage({ onVolver }) {
         )}
 
         {/* Detalle de ventas del periodo */}
-        <section className="card space-y-3">
+        <section className="rounded-2xl bg-white border border-slate-100 shadow-sm p-4 space-y-3">
           <h2 className="text-sm font-bold text-dark-text uppercase tracking-wide">
             Detalle de ventas
           </h2>
@@ -379,9 +403,9 @@ export function CierreCajaPage({ onVolver }) {
                   <li key={venta.id}>
                     <button
                       onClick={() => setVentaSeleccionada(venta)}
-                      className="w-full text-left bg-white border border-slate-200 rounded-xl p-3.5
-                                 flex flex-col gap-1.5 active:scale-[0.98] hover:border-primary/40
-                                 hover:shadow-sm transition-all duration-100"
+                      className="w-full text-left bg-white border border-slate-200 rounded-2xl p-3.5
+                                 flex flex-col gap-1.5 active:scale-[0.98] hover:border-primary-200
+                                 hover:shadow-md transition-all duration-150"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">

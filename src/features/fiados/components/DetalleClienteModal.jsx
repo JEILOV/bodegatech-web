@@ -4,6 +4,7 @@ import { db } from '../../../db/dexie'
 import { actualizarClienteEnNube } from '../../../services/firestoreDataService'
 import { formatCurrency } from '../../../utils/formatCurrency'
 import { formatearFechaCorta } from '../../../utils/fechas'
+import { IconCerrar, IconEditar, IconCaja } from '../../home/NavIcons'
 
 const ICONOS_MEDIO_PAGO = {
   efectivo: '💵',
@@ -96,15 +97,21 @@ export function DetalleClienteModal({ cliente, onCerrar }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center px-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 max-h-[88vh] flex flex-col">
-        <div className="flex items-center justify-between flex-shrink-0">
-          <h3 className="font-bold text-dark-text text-lg">Detalle del cliente</h3>
-          <button onClick={onCerrar} className="text-dark-text-muted text-xl font-bold px-2">
-            ✕
+      <div className="bg-white rounded-2xl w-full max-w-sm max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+        {/* Encabezado con gradiente, en sintonía con AuthPage/HomeScreen */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 to-purple-600 px-5 py-4 flex items-center justify-between flex-shrink-0">
+          <div className="absolute -top-8 -right-8 w-28 h-28 bg-white/10 rounded-full blur-2xl" />
+          <h3 className="relative font-bold text-white text-lg">Detalle del cliente</h3>
+          <button
+            onClick={onCerrar}
+            className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white
+                       hover:bg-white/25 active:scale-90 transition-all duration-150"
+          >
+            <IconCerrar className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="overflow-y-auto space-y-4 pr-0.5">
+        <div className="overflow-y-auto space-y-4 p-5">
           {/* Datos personales */}
           <section className="space-y-3">
             {editando ? (
@@ -133,21 +140,24 @@ export function DetalleClienteModal({ cliente, onCerrar }) {
                   <button
                     onClick={cancelarEdicion}
                     disabled={guardando}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-dark-text-muted font-semibold text-sm"
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-dark-text-muted font-semibold text-sm
+                               hover:border-slate-300 transition-colors duration-150"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={manejarGuardar}
                     disabled={guardando || !huboCambios}
-                    className="btn-primary flex-1 text-sm py-2.5"
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-purple-600 text-white
+                               font-semibold text-sm shadow-sm active:scale-95 transition-all duration-150
+                               disabled:opacity-50 disabled:pointer-events-none"
                   >
                     {guardando ? 'Guardando...' : 'Guardar cambios'}
                   </button>
                 </div>
               </>
             ) : (
-              <div className="bg-slate-50 rounded-xl p-3 flex items-start justify-between gap-3">
+              <div className="bg-slate-50 rounded-xl p-3.5 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-semibold text-dark-text truncate">{cliente.nombre}</p>
                   <p className="text-xs text-dark-text-muted">
@@ -155,7 +165,7 @@ export function DetalleClienteModal({ cliente, onCerrar }) {
                   </p>
                   <p
                     className={`text-sm font-bold mt-1 ${
-                      cliente.deudaTotal > 0 ? 'text-warning' : 'text-success'
+                      cliente.deudaTotal > 0 ? 'text-warning-600' : 'text-success-600'
                     }`}
                   >
                     Deuda actual: {formatCurrency(cliente.deudaTotal)}
@@ -163,9 +173,10 @@ export function DetalleClienteModal({ cliente, onCerrar }) {
                 </div>
                 <button
                   onClick={() => setEditando(true)}
-                  className="text-xs font-semibold text-primary flex-shrink-0 px-2 py-1"
+                  className="flex items-center gap-1 text-xs font-semibold text-primary-700 flex-shrink-0 px-2 py-1
+                             hover:text-primary-800 transition-colors duration-150"
                 >
-                  ✏️ Editar
+                  <IconEditar className="w-3.5 h-3.5" /> Editar
                 </button>
               </div>
             )}
@@ -192,10 +203,14 @@ export function DetalleClienteModal({ cliente, onCerrar }) {
                 <li key={`${transaccion.tipo}-${transaccion.id}`} className="py-2.5 text-sm">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-base flex-shrink-0">
-                        {transaccion.tipo === 'compra'
-                          ? '📦'
-                          : ICONOS_MEDIO_PAGO[transaccion.tipoPago] || '💰'}
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-dark-text-muted">
+                        {transaccion.tipo === 'compra' ? (
+                          <IconCaja className="w-3.5 h-3.5" />
+                        ) : (
+                          <span className="text-sm leading-none">
+                            {ICONOS_MEDIO_PAGO[transaccion.tipoPago] || '💰'}
+                          </span>
+                        )}
                       </span>
                       <div className="min-w-0">
                         <p className="text-dark-text font-medium truncate">
@@ -208,7 +223,7 @@ export function DetalleClienteModal({ cliente, onCerrar }) {
                     </div>
                     <span
                       className={`font-semibold flex-shrink-0 ${
-                        transaccion.tipo === 'compra' ? 'text-warning' : 'text-success'
+                        transaccion.tipo === 'compra' ? 'text-warning-600' : 'text-success-600'
                       }`}
                     >
                       {transaccion.tipo === 'compra' ? '+' : '−'} {formatCurrency(transaccion.monto)}
@@ -216,7 +231,7 @@ export function DetalleClienteModal({ cliente, onCerrar }) {
                   </div>
 
                   {transaccion.tipo === 'compra' && transaccion.items?.length > 0 && (
-                    <ul className="mt-1.5 ml-8 space-y-0.5">
+                    <ul className="mt-1.5 ml-9 space-y-0.5">
                       {transaccion.items.map((item) => (
                         <li key={item.productId} className="text-xs text-dark-text-muted flex justify-between">
                           <span className="truncate pr-2">

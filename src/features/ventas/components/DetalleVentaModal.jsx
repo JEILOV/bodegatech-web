@@ -1,6 +1,7 @@
 import { formatCurrency } from '../../../utils/formatCurrency'
 import { obtenerInfoMetodoPago } from '../../../utils/metodoPago'
 import { formatearCantidadItem } from '../../../utils/granel'
+import { IconCerrar, IconImprimir, IconChat, IconTicket } from '../../home/NavIcons'
 
 const NOMBRE_NEGOCIO = 'Bodega Don Pedro'
 
@@ -113,16 +114,25 @@ export function DetalleVentaModal({ venta, clienteNombre, onCerrar }) {
 
       <div
         id="ticket-imprimible"
-        className="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 max-h-[90vh] flex flex-col print:max-h-none print:rounded-none"
+        className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] flex flex-col shadow-2xl overflow-hidden print:max-h-none print:rounded-none print:shadow-none"
       >
-        <div className="flex items-start justify-between flex-shrink-0 print:hidden">
-          <h3 className="font-bold text-dark-text text-lg">Comprobante de venta</h3>
-          <button onClick={onCerrar} className="text-dark-text-muted text-xl font-bold px-2 -mt-1">
-            ✕
+        {/* Encabezado con gradiente, en sintonía con AuthPage/HomeScreen — oculto al imprimir para que el ticket luzca como un recibo neutro */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 to-purple-600 px-5 py-4 flex items-center justify-between flex-shrink-0 print:hidden">
+          <div className="absolute -top-8 -right-8 w-28 h-28 bg-white/10 rounded-full blur-2xl" />
+          <h3 className="relative flex items-center gap-2 font-bold text-white text-lg">
+            <IconTicket className="w-5 h-5" />
+            Comprobante de venta
+          </h3>
+          <button
+            onClick={onCerrar}
+            className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white
+                       hover:bg-white/25 active:scale-90 transition-all duration-150"
+          >
+            <IconCerrar className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="overflow-y-auto space-y-4 pr-0.5">
+        <div className="overflow-y-auto space-y-4 p-5">
           {/* Cabecera tipo ticket */}
           <div className="text-center border-b border-dashed border-slate-300 pb-3">
             <p className="font-bold text-dark-text">{NOMBRE_NEGOCIO}</p>
@@ -185,30 +195,39 @@ export function DetalleVentaModal({ venta, clienteNombre, onCerrar }) {
             </div>
             <div className="flex justify-between items-center pt-1.5 border-t border-slate-100">
               <span className="font-bold text-dark-text">TOTAL</span>
-              <span className="text-2xl font-bold text-primary">{formatCurrency(venta.total)}</span>
+              <span className="text-2xl font-bold text-primary-600">{formatCurrency(venta.total)}</span>
             </div>
           </div>
         </div>
 
         {/* Acciones */}
-        <div className="flex gap-2 flex-shrink-0 print:hidden">
+        <div className="p-5 pt-0 space-y-2 flex-shrink-0 print:hidden">
+          <div className="flex gap-2">
+            <button
+              onClick={manejarImprimir}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-slate-200
+                         text-dark-text font-semibold text-sm active:scale-95 hover:border-primary-200 hover:shadow-sm
+                         transition-all duration-150"
+            >
+              <IconImprimir className="w-4 h-4" /> Imprimir
+            </button>
+            <button
+              onClick={manejarCompartirWhatsApp}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#25D366] text-white
+                         font-semibold text-sm active:scale-95 transition-transform duration-100 shadow-sm"
+            >
+              <IconChat className="w-4 h-4" /> Compartir
+            </button>
+          </div>
+
           <button
-            onClick={manejarImprimir}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-slate-200 text-dark-text font-semibold text-sm active:scale-95 transition-transform duration-100"
+            onClick={onCerrar}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-primary-600 to-purple-600 text-white
+                       font-semibold shadow-md shadow-primary-600/20 active:scale-95 transition-all duration-150"
           >
-            🖨️ Imprimir
-          </button>
-          <button
-            onClick={manejarCompartirWhatsApp}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#25D366] text-white font-semibold text-sm active:scale-95 transition-transform duration-100"
-          >
-            📲 Compartir
+            Cerrar
           </button>
         </div>
-
-        <button onClick={onCerrar} className="btn-primary w-full flex-shrink-0 print:hidden">
-          Cerrar
-        </button>
       </div>
     </div>
   )
