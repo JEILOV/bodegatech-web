@@ -4,7 +4,7 @@ import { iniciarSincronizacionEnTiempoReal } from './services/syncService'
 import { seedDatabase } from './db/seed'
 import { db } from './db/dexie'
 import { useBackableState } from './hooks/useBackableState'
-import { LoginScreen } from './features/auth/LoginScreen'
+import { AuthPage } from './features/auth/AuthPage'
 import { HomeScreen } from './features/home/HomeScreen'
 import { VentasPage } from './features/ventas/VentasPage'
 import { CierreCajaPage } from './features/ventas/CierreCajaPage'
@@ -151,7 +151,7 @@ function App() {
   }
 
   if (!usuario) {
-    return <LoginScreen />
+    return <AuthPage />
   }
 
   // Cubre el punto 4: mientras el primer snapshot de Firestore no haya

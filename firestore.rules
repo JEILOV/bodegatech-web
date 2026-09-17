@@ -56,6 +56,13 @@ service cloud.firestore {
       allow delete: if true;
     }
 
+    // --- users: perfil de la bodega (nombreBodega, nombreAdministrador) ---
+    // Cada usuario solo puede leer/escribir su propio documento, creado
+    // durante el registro en authService.registrarUsuario().
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // --- Bloqueo por defecto de cualquier otra colección no contemplada ---
     match /{document=**} {
       allow read, write: if false;

@@ -1,7 +1,7 @@
 {
-  "name": "Bodega Don Pedro POS",
-  "short_name": "Don Pedro POS",
-  "description": "Punto de venta, inventario y fiados para Bodega Don Pedro.",
+  "name": "BodegaTech POS",
+  "short_name": "BodegaTech",
+  "description": "Punto de venta, inventario y fiados para tu bodega.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

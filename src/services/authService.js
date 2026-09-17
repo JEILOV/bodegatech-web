@@ -1,5 +1,13 @@
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
-import firebaseApp from './firebase'
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+} from 'firebase/auth'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import firebaseApp, { dbCloud } from './firebase'
 
 /**
  * Instancia de Firebase Auth, basada en la misma app inicializada
@@ -10,14 +18,45 @@ export const auth = getAuth(firebaseApp)
 /**
  * Inicia sesión con correo y contraseña.
  * Lanza el error de Firebase si las credenciales son inválidas,
- * para que la pantalla de login lo capture y muestre un mensaje.
+ * para que AuthPage lo capture y muestre un mensaje amigable.
  *
  * @param {string} email
  * @param {string} password
  * @returns {Promise<import('firebase/auth').UserCredential>}
  */
-export async function iniciarSesion(email, password) {
-  return signInWithEmailAndPassword(auth, email, password)
+export async function loginUsuario(email, password) {
+  return signInWithEmailAndPassword(auth, email.trim(), password)
+}
+
+/**
+ * Crea una cuenta nueva (correo + contraseña), guarda el nombre del
+ * administrador en el perfil de Firebase Auth (displayName) y persiste
+ * el nombre de la bodega en Firestore, en `users/{uid}`.
+ *
+ * Si la escritura en Firestore fallara (por ejemplo, sin conexión), la
+ * cuenta de Auth ya quedó creada igual: no se revierte el alta para no
+ * dejar al usuario sin poder reintentar el registro con el mismo correo.
+ *
+ * @param {{ nombreBodega: string, nombreAdministrador: string, email: string, password: string }} datos
+ * @returns {Promise<import('firebase/auth').UserCredential>}
+ */
+export async function registrarUsuario({ nombreBodega, nombreAdministrador, email, password }) {
+  const credencial = await createUserWithEmailAndPassword(auth, email.trim(), password)
+
+  await updateProfile(credencial.user, { displayName: nombreAdministrador.trim() })
+
+  try {
+    await setDoc(doc(dbCloud, 'users', credencial.user.uid), {
+      nombreBodega: nombreBodega.trim(),
+      nombreAdministrador: nombreAdministrador.trim(),
+      email: email.trim(),
+      creadoEn: serverTimestamp(),
+    })
+  } catch (error) {
+    console.error('[authService] No se pudo guardar el perfil de la bodega en Firestore:', error)
+  }
+
+  return credencial
 }
 
 /**
@@ -28,8 +67,19 @@ export async function cerrarSesion() {
 }
 
 /**
+ * Devuelve el usuario autenticado en este momento (o null), sin
+ * suscribirse a cambios futuros. Útil para chequeos puntuales.
+ *
+ * @returns {import('firebase/auth').User | null}
+ */
+export function obtenerUsuarioActual() {
+  return auth.currentUser
+}
+
+/**
  * Se suscribe a los cambios de estado de autenticación
  * (usuario que inicia sesión, cierra sesión, o token que expira).
+ * Usado por App.jsx para decidir entre AuthPage y la app normal.
  *
  * @param {(usuario: import('firebase/auth').User | null) => void} callback
  * @returns {() => void} Función para cancelar la suscripción
