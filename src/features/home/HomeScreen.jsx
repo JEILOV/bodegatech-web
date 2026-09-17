@@ -4,7 +4,7 @@ import { usePerfilBodega } from '../../hooks/usePerfilBodega'
 import { MetricsHeader } from './components/MetricsHeader'
 import { QuickActions } from './components/QuickActions'
 import { CloudStatusPanel } from './components/CloudStatusPanel'
-import { IconAlerta, IconTienda, IconCerrarSesion } from '../../components/icons/NavIcons'
+import { IconAlerta, IconTienda, IconCerrarSesion } from './NavIcons'
 
 const STOCK_BAJO_UMBRAL = 5
 

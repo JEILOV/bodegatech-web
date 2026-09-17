@@ -1,4 +1,4 @@
-import { IconCarrito, IconFiados, IconInventario, IconCalculadora } from '../../../components/icons/NavIcons'
+import { IconCarrito, IconFiados, IconInventario, IconCalculadora } from '../NavIcons'
 
 const ACCIONES_SECUNDARIAS_BASE = 'flex flex-col items-center gap-2 rounded-2xl border border-slate-200 bg-white py-4 shadow-sm active:scale-95 transition-all duration-150 hover:border-primary-200 hover:shadow-md'
 

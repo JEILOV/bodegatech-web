@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../db/dexie'
 import { formatCurrency } from '../../../utils/formatCurrency'
 import { obtenerRangoDeHoy } from '../../../utils/fechas'
-import { IconTendencia, IconPorCobrar } from '../../../components/icons/NavIcons'
+import { IconTendencia, IconPorCobrar } from '../NavIcons'
 
 export function MetricsHeader() {
   // OJO: este componente solo se monta cuando App.jsx ya bajó la pantalla
