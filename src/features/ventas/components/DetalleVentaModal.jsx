@@ -1,5 +1,6 @@
 import { formatCurrency } from '../../../utils/formatCurrency'
 import { obtenerInfoMetodoPago } from '../../../utils/metodoPago'
+import { formatearCantidadItem } from '../../../utils/granel'
 
 const NOMBRE_NEGOCIO = 'Bodega Don Pedro'
 
@@ -46,8 +47,8 @@ function construirTextoTicket({ venta, clienteNombre }) {
   for (const item of venta.items) {
     const subtotal = item.precioUnitario * item.cantidad
     lineas.push(
-      `${item.cantidad} x ${item.nombre}`,
-      `   ${formatCurrency(item.precioUnitario)} c/u = ${formatCurrency(subtotal)}`
+      item.nombre,
+      `   ${formatearCantidadItem(item)} x ${formatCurrency(item.precioUnitario)}${item.esGranel ? '' : ' c/u'} = ${formatCurrency(subtotal)}`
     )
   }
 
@@ -156,10 +157,13 @@ export function DetalleVentaModal({ venta, clienteNombre, onCerrar }) {
                 >
                   <div className="min-w-0">
                     <p className="text-dark-text truncate">{item.nombre}</p>
-                    <p className="text-xs text-dark-text-muted">x{item.cantidad}</p>
+                    <p className="text-xs text-dark-text-muted">
+                      {item.esGranel ? formatearCantidadItem(item) : `x${item.cantidad}`}
+                    </p>
                   </div>
                   <span className="text-right text-dark-text-muted whitespace-nowrap">
                     {formatCurrency(item.precioUnitario)}
+                    {item.esGranel && <span className="text-xs">/{item.unidadMedida}</span>}
                   </span>
                   <span className="text-right font-semibold text-dark-text whitespace-nowrap">
                     {formatCurrency(item.precioUnitario * item.cantidad)}

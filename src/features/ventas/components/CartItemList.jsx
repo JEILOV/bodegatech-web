@@ -1,6 +1,7 @@
 import { formatCurrency } from '../../../utils/formatCurrency'
+import { formatearCantidadItem } from '../../../utils/granel'
 
-export function CartItemList({ items, onIncrementar, onDecrementar, onEliminar }) {
+export function CartItemList({ items, onIncrementar, onDecrementar, onEliminar, onEditarGranel }) {
   if (items.length === 0) {
     return (
       <div className="card text-center py-6">
@@ -23,27 +24,39 @@ export function CartItemList({ items, onIncrementar, onDecrementar, onEliminar }
               {item.nombre}
             </p>
             <p className="text-xs text-dark-text-muted">
-              {formatCurrency(item.precioUnitario)} c/u
+              {formatCurrency(item.precioUnitario)} {item.esGranel ? `/ ${item.unidadMedida}` : 'c/u'}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          {item.esGranel ? (
+            // Producto a granel: no tiene sentido sumar/restar de a 1, así
+            // que la cantidad se toca para reabrir el input rápido
+            // (CantidadGranelModal) y corregir peso o monto.
             <button
-              onClick={() => onDecrementar(item.productId)}
-              className="w-8 h-8 rounded-lg bg-slate-100 text-dark-text font-bold active:scale-95"
+              onClick={() => onEditarGranel(item.productId)}
+              className="px-3 py-1.5 rounded-lg bg-slate-100 text-dark-text font-semibold text-sm active:scale-95 whitespace-nowrap"
             >
-              −
+              {formatearCantidadItem(item)} ✏️
             </button>
-            <span className="w-6 text-center font-semibold text-dark-text">
-              {item.cantidad}
-            </span>
-            <button
-              onClick={() => onIncrementar(item.productId)}
-              className="w-8 h-8 rounded-lg bg-slate-100 text-dark-text font-bold active:scale-95"
-            >
-              +
-            </button>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onDecrementar(item.productId)}
+                className="w-8 h-8 rounded-lg bg-slate-100 text-dark-text font-bold active:scale-95"
+              >
+                −
+              </button>
+              <span className="w-6 text-center font-semibold text-dark-text">
+                {item.cantidad}
+              </span>
+              <button
+                onClick={() => onIncrementar(item.productId)}
+                className="w-8 h-8 rounded-lg bg-slate-100 text-dark-text font-bold active:scale-95"
+              >
+                +
+              </button>
+            </div>
+          )}
 
           <p className="w-16 text-right text-sm font-bold text-dark-text">
             {formatCurrency(item.precioUnitario * item.cantidad)}

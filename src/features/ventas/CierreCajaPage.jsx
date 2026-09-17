@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/dexie'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { obtenerInfoMetodoPago } from '../../utils/metodoPago'
+import { formatearCantidadItem } from '../../utils/granel'
 import { DetalleVentaModal } from './components/DetalleVentaModal'
 
 /** Convierte un objeto Date a formato "YYYY-MM-DD" (el que usan los <input type="date">). */
@@ -26,14 +27,17 @@ function formatearFechaHora(fechaISO) {
 
 /**
  * Resumen breve de los productos de una venta, para la tarjeta de la
- * lista (ej. "2 productos: Aceite Primor 1L, Inka Kola..."). Muestra los
- * nombres de los primeros 2 ítems y agrega "..." si hay más.
+ * lista (ej. "2 productos: Aceite Primor 1L, Inka Kola..." o, con un
+ * producto a granel, "1 producto: 1.5 kg Carne de res"). Muestra los
+ * primeros 2 ítems y agrega "..." si hay más.
  */
 function resumirItems(items) {
   if (!items || items.length === 0) return 'Sin productos'
   const cantidad = items.length
   const etiquetaCantidad = `${cantidad} producto${cantidad === 1 ? '' : 's'}`
-  const nombres = items.slice(0, 2).map((item) => item.nombre)
+  const nombres = items
+    .slice(0, 2)
+    .map((item) => (item.esGranel ? `${formatearCantidadItem(item)} ${item.nombre}` : item.nombre))
   const sufijo = cantidad > 2 ? '...' : ''
   return `${etiquetaCantidad}: ${nombres.join(', ')}${sufijo}`
 }

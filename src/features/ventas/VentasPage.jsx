@@ -6,6 +6,7 @@ import { formatCurrency } from '../../utils/formatCurrency'
 import { ScannerModal } from './components/ScannerModal'
 import { CartItemList } from './components/CartItemList'
 import { SelectorClienteModal } from './components/SelectorClienteModal.jsx'
+import { CantidadGranelModal } from './components/CantidadGranelModal'
 
 const DENOMINACIONES_SUGERIDAS = [10, 20, 50]
 
@@ -18,6 +19,10 @@ export function VentasPage({ onVentaFinalizada }) {
   const [clienteSeleccionadoId, setClienteSeleccionadoId] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [mostrarSelectorCliente, setMostrarSelectorCliente] = useState(false)
+  // Producto a granel pendiente de que el bodeguero confirme peso/monto
+  // antes de entrar al carrito, o item del carrito que se está corrigiendo:
+  // { producto, cantidadInicial? }
+  const [granelEnEdicion, setGranelEnEdicion] = useState(null)
 
   const productos = useLiveQuery(() => db.products.toArray(), [])
   const clientes = useLiveQuery(() => db.customers.toArray(), [])
@@ -42,6 +47,22 @@ export function VentasPage({ onVentaFinalizada }) {
   const vuelto = modoPago === 'efectivo' ? Math.max(montoRecibido - total, 0) : 0
 
   function agregarProductoAlCarrito(producto) {
+    // Producto a granel: nunca se agrega directo con cantidad 1 (no tiene
+    // sentido para algo que se vende por kg/gr/lt o por monto). Se abre el
+    // input rápido y recién al confirmar entra al carrito. Si ya estaba en
+    // el carrito, se reabre en modo edición (prefilled) en vez de crear
+    // una segunda línea duplicada para el mismo producto.
+    if (producto.tipoVenta === 'granel') {
+      const itemExistente = carrito.find((item) => item.productId === producto.id)
+      setGranelEnEdicion({
+        producto,
+        cantidadInicial: itemExistente?.cantidad,
+        esEdicion: Boolean(itemExistente),
+      })
+      setBusqueda('')
+      return
+    }
+
     setCarrito((carritoActual) => {
       const yaExiste = carritoActual.find((item) => item.productId === producto.id)
       if (yaExiste) {
@@ -63,6 +84,53 @@ export function VentasPage({ onVentaFinalizada }) {
       ]
     })
     setBusqueda('')
+  }
+
+  /**
+   * Confirma la cantidad calculada por `CantidadGranelModal` (ya sea por
+   * peso/fracción o por monto fijo) y la aplica al carrito: agrega un
+   * ítem nuevo, o actualiza la cantidad si ya se estaba corrigiendo uno
+   * que estaba en el carrito (`granelEnEdicion.esEdicion`).
+   */
+  function confirmarCantidadGranel(cantidad) {
+    const { producto, esEdicion } = granelEnEdicion
+
+    setCarrito((carritoActual) => {
+      if (esEdicion) {
+        return carritoActual.map((item) =>
+          item.productId === producto.id ? { ...item, cantidad } : item
+        )
+      }
+      return [
+        ...carritoActual,
+        {
+          productId: producto.id,
+          nombre: producto.nombre,
+          precioUnitario: producto.precioVenta,
+          cantidad,
+          esGranel: true,
+          unidadMedida: producto.unidadMedida,
+        },
+      ]
+    })
+  }
+
+  /** Reabre el input rápido de granel para corregir un ítem ya agregado al carrito. */
+  async function editarCantidadGranelEnCarrito(productId) {
+    const item = carrito.find((itemCarrito) => itemCarrito.productId === productId)
+    if (!item) return
+
+    // El precio/unidad y la unidad de medida se toman de Dexie (fuente de
+    // verdad más reciente); si cambiaron desde que se agregó al carrito,
+    // el modal ya calcula con el precio vigente.
+    const producto = (await db.products.get(productId)) || {
+      id: productId,
+      nombre: item.nombre,
+      precioVenta: item.precioUnitario,
+      unidadMedida: item.unidadMedida,
+    }
+
+    setGranelEnEdicion({ producto, cantidadInicial: item.cantidad, esEdicion: true })
   }
 
   function manejarCodigoEscaneado(codigo) {
@@ -169,6 +237,8 @@ export function VentasPage({ onVentaFinalizada }) {
             nombre: item.nombre,
             precioUnitario: item.precioUnitario,
             cantidad: item.cantidad,
+            esGranel: item.esGranel || false,
+            unidadMedida: item.unidadMedida || null,
           })),
         },
         itemsStock,
@@ -220,8 +290,9 @@ export function VentasPage({ onVentaFinalizada }) {
                     className="w-full text-left px-4 py-3 hover:bg-slate-50 flex justify-between"
                   >
                     <span className="text-sm text-dark-text">{producto.nombre}</span>
-                    <span className="text-sm font-semibold text-primary">
+                    <span className="text-sm font-semibold text-primary whitespace-nowrap">
                       {formatCurrency(producto.precioVenta)}
+                      {producto.tipoVenta === 'granel' ? ` / ${producto.unidadMedida}` : ''}
                     </span>
                   </button>
                 </li>
@@ -251,6 +322,7 @@ export function VentasPage({ onVentaFinalizada }) {
             onIncrementar={incrementarCantidad}
             onDecrementar={decrementarCantidad}
             onEliminar={eliminarDelCarrito}
+            onEditarGranel={editarCantidadGranelEnCarrito}
           />
         </section>
 
@@ -351,6 +423,15 @@ export function VentasPage({ onVentaFinalizada }) {
           clienteSeleccionadoId={clienteSeleccionadoId}
           onSeleccionar={setClienteSeleccionadoId}
           onCerrar={() => setMostrarSelectorCliente(false)}
+        />
+      )}
+
+      {granelEnEdicion && (
+        <CantidadGranelModal
+          producto={granelEnEdicion.producto}
+          cantidadInicial={granelEnEdicion.cantidadInicial}
+          onConfirmar={confirmarCantidadGranel}
+          onCerrar={() => setGranelEnEdicion(null)}
         />
       )}
     </div>

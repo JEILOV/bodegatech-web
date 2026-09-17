@@ -3,6 +3,7 @@ import { crearProductoEnNube } from '../../../services/firestoreDataService'
 import { MASTER_PRODUCTS } from '../../../db/masterCatalog'
 import { buscarProductoPorCodigo } from '../../../services/openFoodFactsApi'
 import { ScannerModal } from '../../ventas/components/ScannerModal'
+import { UNIDADES_MEDIDA_GRANEL } from '../../../utils/granel'
 
 const CATEGORIA_POR_DEFECTO = 'Abarrotes'
 
@@ -27,6 +28,8 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
   const [imagen, setImagen] = useState(null)
   const [precioVenta, setPrecioVenta] = useState('')
   const [stock, setStock] = useState('')
+  const [tipoVenta, setTipoVenta] = useState('unidad') // 'unidad' | 'granel'
+  const [unidadMedida, setUnidadMedida] = useState(UNIDADES_MEDIDA_GRANEL[0])
   const [mostrarScanner, setMostrarScanner] = useState(false)
   const [consultando, setConsultando] = useState(false)
   const [guardando, setGuardando] = useState(false)
@@ -107,14 +110,25 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
     setGuardando(true)
     try {
       const nuevoProductoId = `prod-${Date.now()}`
+
+      // Código de barras 100% opcional: los productos a granel (carne,
+      // pollo, arroz suelto, etc.) casi nunca tienen uno propio. Si se
+      // deja vacío, se genera uno sintético y único a partir del id del
+      // producto, para nunca chocar con el índice único `&codigoBarras`
+      // de Dexie (misma convención que usa syncService.js al sanear
+      // productos que llegan sin código desde la nube).
+      const codigoBarrasFinal = codigoBarras.trim() || `SIN-CODIGO-${nuevoProductoId}`
+
       await crearProductoEnNube({
         id: nuevoProductoId,
-        codigoBarras: codigoBarras.trim() || null,
+        codigoBarras: codigoBarrasFinal,
         nombre: nombre.trim(),
         categoria: categoria.trim() || CATEGORIA_POR_DEFECTO,
         precioVenta: precioNumero,
         stock: stockNumero,
         imagen: imagen || null,
+        tipoVenta,
+        unidadMedida: tipoVenta === 'granel' ? unidadMedida : null,
       })
       onProductoCreado?.(nuevoProductoId)
       onCerrar()
@@ -141,13 +155,15 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
         )}
 
         <div>
-          <label className="text-xs font-medium text-dark-text-muted">Código de barras</label>
+          <label className="text-xs font-medium text-dark-text-muted">
+            Código de barras <span className="font-normal">(opcional)</span>
+          </label>
           <div className="flex gap-2 mt-1">
             <input
               type="text"
               value={codigoBarras}
               onChange={(evento) => setCodigoBarras(evento.target.value)}
-              placeholder="Ej: 7750243004018"
+              placeholder="Ej: 7750243004018 — déjalo vacío si no tiene"
               className="input-field flex-1"
             />
             <button
@@ -158,6 +174,10 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
               🔍
             </button>
           </div>
+          <p className="text-xs text-dark-text-muted mt-1">
+            Útil para productos sin empaque propio (carne, pollo, arroz suelto...): si lo
+            dejas vacío, el sistema le asigna un código interno automático.
+          </p>
         </div>
 
         <button
@@ -196,11 +216,67 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
           />
         </div>
 
+        {/* Tipo de venta: por unidad (default) o a granel/peso. Productos
+            como carne, pollo, arroz o azúcar sueltos se venden por
+            fracción (kg/gr) o por monto directo, no por unidades enteras. */}
+        <div>
+          <label className="text-xs font-medium text-dark-text-muted">Tipo de venta</label>
+          <div className="grid grid-cols-2 gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => setTipoVenta('unidad')}
+              className={`py-2.5 rounded-xl text-sm font-semibold border ${
+                tipoVenta === 'unidad'
+                  ? 'bg-primary text-white border-primary'
+                  : 'bg-white text-dark-text border-slate-200'
+              }`}
+            >
+              📦 Por Unidad
+            </button>
+            <button
+              type="button"
+              onClick={() => setTipoVenta('granel')}
+              className={`py-2.5 rounded-xl text-sm font-semibold border ${
+                tipoVenta === 'granel'
+                  ? 'bg-primary text-white border-primary'
+                  : 'bg-white text-dark-text border-slate-200'
+              }`}
+            >
+              ⚖️ A Granel / Peso
+            </button>
+          </div>
+        </div>
+
+        {tipoVenta === 'granel' && (
+          <div>
+            <label className="text-xs font-medium text-dark-text-muted">Unidad de medida</label>
+            <div className="grid grid-cols-3 gap-2 mt-1">
+              {UNIDADES_MEDIDA_GRANEL.map((unidad) => (
+                <button
+                  key={unidad}
+                  type="button"
+                  onClick={() => setUnidadMedida(unidad)}
+                  className={`py-2 rounded-xl text-sm font-semibold border uppercase ${
+                    unidadMedida === unidad
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-white text-dark-text border-slate-200'
+                  }`}
+                >
+                  {unidad}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-dark-text-muted">Precio (S/)</label>
+            <label className="text-xs font-medium text-dark-text-muted">
+              {tipoVenta === 'granel' ? `Precio por ${unidadMedida} (S/)` : 'Precio (S/)'}
+            </label>
             <input
               type="number"
+              step={tipoVenta === 'granel' ? '0.01' : '1'}
               value={precioVenta}
               onChange={(evento) => setPrecioVenta(evento.target.value)}
               placeholder="0.00"
@@ -208,9 +284,12 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-dark-text-muted">Stock inicial</label>
+            <label className="text-xs font-medium text-dark-text-muted">
+              {tipoVenta === 'granel' ? `Stock inicial (${unidadMedida})` : 'Stock inicial'}
+            </label>
             <input
               type="number"
+              step={tipoVenta === 'granel' ? '0.001' : '1'}
               value={stock}
               onChange={(evento) => setStock(evento.target.value)}
               placeholder="0"
