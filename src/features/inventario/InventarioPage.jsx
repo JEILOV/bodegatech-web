@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/dexie'
 import { formatCurrency } from '../../utils/formatCurrency'
+import { useBackableState } from '../../hooks/useBackableState'
 import { EditarStockModal } from './components/EditarStockModal'
 import { NuevoProductoModal } from './components/NuevoProductoModal'
 import { EntradaMercaderiaModal } from './components/EntradaMercaderiaModal'
@@ -14,6 +15,13 @@ export function InventarioPage({ onVolver }) {
   const [mostrarNuevoProducto, setMostrarNuevoProducto] = useState(false)
   const [mostrarEntradaMercaderia, setMostrarEntradaMercaderia] = useState(false)
   const [codigoParaNuevoProducto, setCodigoParaNuevoProducto] = useState(null)
+
+  // Botón/gesto "Atrás" del celular: primero cierra el modal abierto
+  // (Editar stock, Nuevo producto o Entrada de mercadería) en vez de
+  // salir de la pantalla de Inventario.
+  useBackableState(Boolean(productoParaEditar), () => setProductoParaEditar(null))
+  useBackableState(mostrarNuevoProducto, cerrarNuevoProducto)
+  useBackableState(mostrarEntradaMercaderia, () => setMostrarEntradaMercaderia(false))
 
   const productos = useLiveQuery(() => db.products.toArray(), [])
 
@@ -150,4 +158,4 @@ export function InventarioPage({ onVolver }) {
   )
 }
 
-export default InventarioPage
+export default InventarioPage 

@@ -3,6 +3,7 @@ import { observarEstadoAuth, cerrarSesion } from './services/authService'
 import { iniciarSincronizacionEnTiempoReal } from './services/syncService'
 import { seedDatabase } from './db/seed'
 import { db } from './db/dexie'
+import { useBackableState } from './hooks/useBackableState'
 import { LoginScreen } from './features/auth/LoginScreen'
 import { HomeScreen } from './features/home/HomeScreen'
 import { VentasPage } from './features/ventas/VentasPage'
@@ -44,6 +45,15 @@ function App() {
   // ejemplo al refrescar el ID token en segundo plano). Solo nos importa
   // reaccionar cuando el UID realmente cambia (login/logout).
   const uidHidratadoRef = useRef(null)
+
+  // Navegación resiliente al botón/gesto "Atrás" nativo del celular:
+  // cada vez que `pantalla` deja de ser 'home' (Ventas, Inventario,
+  // Fiados, Cierre de Caja), se agrega una entrada al historial del
+  // navegador. Si el usuario presiona Atrás, en vez de salir de la app
+  // o refrescar la página, el hook detecta el `popstate` y nos regresa
+  // a Home mediante el mismo setState que ya usan los botones "←" de
+  // cada pantalla (`onVolver`).
+  useBackableState(pantalla !== 'home', () => setPantalla('home'))
 
   useEffect(() => {
     const cancelarSuscripcion = observarEstadoAuth((usuarioActual) => {

@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/dexie'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { construirEnlaceRecordatorioWhatsApp } from '../../utils/whatsapp'
+import { useBackableState } from '../../hooks/useBackableState'
 import { NuevoClienteModal } from './components/NuevoClienteModal'
 import { AbonoModal } from './components/AbonoModal'
 import { HistorialAbonos } from './components/HistorialAbonos'
@@ -19,6 +20,13 @@ export function FiadosPage({ onVolver }) {
   const [clienteParaAbono, setClienteParaAbono] = useState(null)
   const [clienteParaDetalle, setClienteParaDetalle] = useState(null)
   const [clienteConHistorialAbierto, setClienteConHistorialAbierto] = useState(null)
+
+  // Botón/gesto "Atrás" del celular: primero cierra el modal abierto
+  // (Nuevo cliente, Registrar abono o Detalle de cliente) en vez de
+  // salir de la pantalla de Fiados.
+  useBackableState(mostrarNuevoCliente, () => setMostrarNuevoCliente(false))
+  useBackableState(Boolean(clienteParaAbono), () => setClienteParaAbono(null))
+  useBackableState(Boolean(clienteParaDetalle), () => setClienteParaDetalle(null))
 
   const clientes = useLiveQuery(() => db.customers.toArray(), [])
 

@@ -4,6 +4,7 @@ import { db } from '../../db/dexie'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { obtenerInfoMetodoPago } from '../../utils/metodoPago'
 import { formatearCantidadItem } from '../../utils/granel'
+import { useBackableState } from '../../hooks/useBackableState'
 import { DetalleVentaModal } from './components/DetalleVentaModal'
 
 /** Convierte un objeto Date a formato "YYYY-MM-DD" (el que usan los <input type="date">). */
@@ -83,6 +84,10 @@ export function CierreCajaPage({ onVolver }) {
   const [fechaFin, setFechaFin] = useState(() => formatearInputDate(HOY))
   const [cierre, setCierre] = useState(null)
   const [ventaSeleccionada, setVentaSeleccionada] = useState(null)
+
+  // Botón/gesto "Atrás" del celular: primero cierra el modal de Detalle
+  // de venta en vez de salir de la pantalla de Reporte de Ventas.
+  useBackableState(Boolean(ventaSeleccionada), () => setVentaSeleccionada(null))
 
   const clientes = useLiveQuery(() => db.customers.toArray(), [])
 

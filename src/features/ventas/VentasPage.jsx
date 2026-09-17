@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/dexie'
 import { registrarVentaEnNube } from '../../services/firestoreDataService'
 import { formatCurrency } from '../../utils/formatCurrency'
+import { useBackableState } from '../../hooks/useBackableState'
 import { ScannerModal } from './components/ScannerModal'
 import { CartItemList } from './components/CartItemList'
 import { SelectorClienteModal } from './components/SelectorClienteModal.jsx'
@@ -23,6 +24,14 @@ export function VentasPage({ onVentaFinalizada }) {
   // antes de entrar al carrito, o item del carrito que se está corrigiendo:
   // { producto, cantidadInicial? }
   const [granelEnEdicion, setGranelEnEdicion] = useState(null)
+
+  // Botón/gesto "Atrás" del celular: primero cierra el modal que esté
+  // abierto (Escáner, Selector de cliente o Cantidad a granel) en vez de
+  // salir de la pantalla de Venta. Cada modal tiene su propia entrada en
+  // el historial del navegador.
+  useBackableState(mostrarScanner, () => setMostrarScanner(false))
+  useBackableState(mostrarSelectorCliente, () => setMostrarSelectorCliente(false))
+  useBackableState(Boolean(granelEnEdicion), () => setGranelEnEdicion(null))
 
   const productos = useLiveQuery(() => db.products.toArray(), [])
   const clientes = useLiveQuery(() => db.customers.toArray(), [])
