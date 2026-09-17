@@ -238,6 +238,13 @@ export function CloudStatusPanel() {
 
             {errorRemoto && <p className="text-xs text-red-600">{errorRemoto}</p>}
 
+            <p className="text-[11px] text-dark-text-muted leading-snug">
+              Nota: si la nube tiene productos con <code>codigoBarras</code> vacío o
+              duplicado, este dispositivo consolida cada duplicado en un solo producto (el
+              más reciente). Por diseño, el conteo local de productos puede entonces ser
+              menor al de la nube sin que eso sea un desfase real.
+            </p>
+
             <div className="flex items-center justify-between pt-1 border-t border-slate-100">
               <p className="text-xs text-dark-text-muted pt-3">
                 {remoto
