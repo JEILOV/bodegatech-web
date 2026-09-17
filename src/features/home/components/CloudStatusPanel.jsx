@@ -21,14 +21,20 @@ const INTERVALO_REFRESCO_REMOTO_MS = 5000
  * El lado REMOTO consulta Firestore directamente con agregaciones del
  * propio servidor (`getAggregateFromServer` + `count()`/`sum()`), NO
  * pasando por Dexie. Así el número remoto es 100% independiente de
- * cualquier bug de sincronización local: si algo se desfasó, este panel
- * lo va a mostrar en vez de ocultarlo repitiendo el mismo dato dos veces.
+ * cualquier bug de caché local: si algo se desfasó, este panel lo va a
+ * mostrar en vez de ocultarlo repitiendo el mismo dato dos veces.
+ *
+ * Cloud Directo: ya no existe una cola de "cambios pendientes de subir"
+ * que contar (cada venta/abono/restock se escribe directo en Firestore
+ * al momento). Lo único que puede impedir guardar es no tener internet,
+ * así que el indicador refleja eso: conectividad real del dispositivo.
  */
 export function CloudStatusPanel() {
   const [abierto, setAbierto] = useState(false)
   const [remoto, setRemoto] = useState(null)
   const [cargandoRemoto, setCargandoRemoto] = useState(false)
   const [errorRemoto, setErrorRemoto] = useState(null)
+  const [enLinea, setEnLinea] = useState(navigator.onLine)
 
   // ---------- Local (Dexie), en tiempo real ----------
   const totalProductosLocal = useLiveQuery(() => db.products.count(), [])
@@ -60,17 +66,19 @@ export function CloudStatusPanel() {
     }
   }, [])
 
-  // Cuenta registros con `synced: false` en las 4 tablas sincronizables.
-  // Mientras este número sea > 0, todavía hay cambios locales (ventas,
-  // abonos, restocks) que no terminaron de subir a Firestore.
-  const pendientesSync = useLiveQuery(async () => {
-    const [p, s, c, m] = await Promise.all([
-      db.products.filter((r) => r.synced === false).count(),
-      db.sales.filter((r) => r.synced === false).count(),
-      db.customers.filter((r) => r.synced === false).count(),
-      db.movements.filter((r) => r.synced === false).count(),
-    ])
-    return p + s + c + m
+  // Conectividad real del dispositivo: en Cloud Directo, sin internet
+  // ninguna escritura puede completarse (no hay cola local que la guarde
+  // para después), así que esto es lo único relevante que mostrar acá.
+  useEffect(() => {
+    function actualizarEstadoConexion() {
+      setEnLinea(navigator.onLine)
+    }
+    window.addEventListener('online', actualizarEstadoConexion)
+    window.addEventListener('offline', actualizarEstadoConexion)
+    return () => {
+      window.removeEventListener('online', actualizarEstadoConexion)
+      window.removeEventListener('offline', actualizarEstadoConexion)
+    }
   }, [])
 
   // ---------- Remoto (Firestore), bajo demanda ----------
@@ -125,8 +133,6 @@ export function CloudStatusPanel() {
     return () => clearInterval(intervalo)
   }, [abierto])
 
-  const sincronizado = pendientesSync === 0
-
   return (
     <>
       <button
@@ -137,11 +143,7 @@ export function CloudStatusPanel() {
       >
         <span
           className={`h-2.5 w-2.5 rounded-full ${
-            pendientesSync === undefined
-              ? 'bg-slate-300'
-              : sincronizado
-                ? 'bg-success'
-                : 'bg-warning animate-pulse'
+            enLinea ? 'bg-success' : 'bg-warning animate-pulse'
           }`}
         />
         <span className="text-sm font-semibold text-dark-text">Estado de la nube</span>
@@ -160,27 +162,21 @@ export function CloudStatusPanel() {
               </button>
             </div>
 
-            {/* 5. Estado de sync */}
+            {/* 5. Estado de conexión (Cloud Directo: sin internet no se puede guardar) */}
             <div
               className={`rounded-xl p-3 flex items-center gap-3 ${
-                sincronizado ? 'bg-success/10' : 'bg-warning/10'
+                enLinea ? 'bg-success/10' : 'bg-warning/10'
               }`}
             >
               <span
                 className={`h-3 w-3 rounded-full flex-shrink-0 ${
-                  pendientesSync === undefined
-                    ? 'bg-slate-300'
-                    : sincronizado
-                      ? 'bg-success'
-                      : 'bg-warning animate-pulse'
+                  enLinea ? 'bg-success' : 'bg-warning animate-pulse'
                 }`}
               />
-              <p className={`text-sm font-bold ${sincronizado ? 'text-success' : 'text-warning'}`}>
-                {pendientesSync === undefined
-                  ? 'Verificando...'
-                  : sincronizado
-                    ? 'Sincronizado al 100%'
-                    : `Subiendo cambios pendientes... (${pendientesSync})`}
+              <p className={`text-sm font-bold ${enLinea ? 'text-success' : 'text-warning'}`}>
+                {enLinea
+                  ? 'Conectado a la nube'
+                  : 'Sin conexión: los cambios no se guardarán hasta reconectar'}
               </p>
             </div>
 

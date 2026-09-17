@@ -53,9 +53,6 @@ export function HistorialAbonos({ clienteId, limite = 5 }) {
               <p className="text-xs text-dark-text-muted truncate">
                 {formatearFecha(abono.fecha)}
               </p>
-              {!abono.synced && (
-                <p className="text-[10px] text-warning">Pendiente de sincronizar</p>
-              )}
             </div>
           </div>
           <span className="font-semibold text-success flex-shrink-0">

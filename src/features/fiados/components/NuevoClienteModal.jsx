@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { db } from '../../../db/dexie'
+import { crearClienteEnNube } from '../../../services/firestoreDataService'
 
 export function NuevoClienteModal({ onCerrar, onClienteCreado }) {
   const [nombre, setNombre] = useState('')
@@ -15,18 +15,17 @@ export function NuevoClienteModal({ onCerrar, onClienteCreado }) {
     setGuardando(true)
     try {
       const nuevoClienteId = `cust-${Date.now()}`
-      await db.customers.add({
+      await crearClienteEnNube({
         id: nuevoClienteId,
         nombre: nombre.trim(),
         telefono: telefono.trim(),
         deudaTotal: 0,
-        synced: false,
       })
       onClienteCreado?.(nuevoClienteId)
       onCerrar()
     } catch (error) {
       console.error('Error al crear cliente:', error)
-      alert('Ocurrió un error al guardar el cliente.')
+      alert('Ocurrió un error al guardar el cliente. Verifica tu conexión a internet.')
     } finally {
       setGuardando(false)
     }

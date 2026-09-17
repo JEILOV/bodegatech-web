@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { db } from '../../../db/dexie'
+import { crearProductoEnNube } from '../../../services/firestoreDataService'
 import { MASTER_PRODUCTS } from '../../../db/masterCatalog'
 import { buscarProductoPorCodigo } from '../../../services/openFoodFactsApi'
 import { ScannerModal } from '../../ventas/components/ScannerModal'
@@ -107,7 +107,7 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
     setGuardando(true)
     try {
       const nuevoProductoId = `prod-${Date.now()}`
-      await db.products.add({
+      await crearProductoEnNube({
         id: nuevoProductoId,
         codigoBarras: codigoBarras.trim() || null,
         nombre: nombre.trim(),
@@ -115,13 +115,12 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
         precioVenta: precioNumero,
         stock: stockNumero,
         imagen: imagen || null,
-        synced: false,
       })
       onProductoCreado?.(nuevoProductoId)
       onCerrar()
     } catch (error) {
       console.error('Error al guardar producto:', error)
-      alert('Ocurrió un error al guardar el producto. Verifica que el código de barras no esté repetido.')
+      alert('Ocurrió un error al guardar el producto. Verifica tu conexión a internet.')
     } finally {
       setGuardando(false)
     }

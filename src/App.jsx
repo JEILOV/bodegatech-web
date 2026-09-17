@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { observarEstadoAuth, cerrarSesion } from './services/authService'
 import { iniciarSincronizacionEnTiempoReal } from './services/syncService'
-import { useSyncOffline } from './hooks/useSyncOffline'
 import { seedDatabase } from './db/seed'
 import { db } from './db/dexie'
 import { LoginScreen } from './features/auth/LoginScreen'
@@ -45,8 +44,6 @@ function App() {
   // ejemplo al refrescar el ID token en segundo plano). Solo nos importa
   // reaccionar cuando el UID realmente cambia (login/logout).
   const uidHidratadoRef = useRef(null)
-
-  useSyncOffline()
 
   useEffect(() => {
     const cancelarSuscripcion = observarEstadoAuth((usuarioActual) => {

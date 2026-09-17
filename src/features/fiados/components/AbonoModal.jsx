@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { db } from '../../../db/dexie'
+import { registrarAbonoEnNube } from '../../../services/firestoreDataService'
 import { formatCurrency } from '../../../utils/formatCurrency'
 
 const MEDIOS_PAGO = [
@@ -33,28 +33,26 @@ export function AbonoModal({ cliente, onCerrar, onAbonoRegistrado }) {
     const fecha = new Date().toISOString()
 
     try {
-      await db.transaction('rw', db.customers, db.movements, async () => {
-        await db.movements.add({
+      // Cloud Directo: movimiento de abono + nueva deuda, juntos y
+      // directo en Firestore (writeBatch), sin pasar por Dexie.
+      await registrarAbonoEnNube({
+        movimiento: {
           id: `mov-${Date.now()}`,
           customerId: cliente.id,
           fecha,
           tipo: 'abono',
           monto: montoNumero,
           tipoPago,
-          synced: false,
-        })
-
-        await db.customers.update(cliente.id, {
-          deudaTotal: Math.max(cliente.deudaTotal - montoNumero, 0),
-          synced: false,
-        })
+        },
+        clienteId: cliente.id,
+        nuevaDeuda: Math.max(cliente.deudaTotal - montoNumero, 0),
       })
 
       onAbonoRegistrado?.()
       onCerrar()
     } catch (error) {
       console.error('Error al registrar abono:', error)
-      alert('Ocurrió un error al registrar el abono.')
+      alert('Ocurrió un error al registrar el abono. Verifica tu conexión a internet.')
     } finally {
       setGuardando(false)
     }

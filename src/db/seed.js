@@ -1,10 +1,14 @@
+import { doc, writeBatch } from 'firebase/firestore'
 import { db } from './dexie'
+import { dbCloud } from '../services/firebase'
 import { MASTER_PRODUCTS } from './masterCatalog'
 
 /**
- * Inyecta datos de prueba locales SOLO si las tablas
- * relevantes están vacías. Seguro de llamar en cada arranque
- * de la app (no duplica datos).
+ * Siembra datos de demo SOLO si, tras la primera descarga de Firestore,
+ * las tablas relevantes siguen vacías (ver App.jsx). Cloud Directo: esto
+ * escribe directo en Firestore con un `writeBatch` (no en Dexie); el
+ * listener de syncService.js se encarga de reflejarlo en el caché local
+ * al instante, igual que cualquier otra escritura de la app.
  */
 export async function seedDatabase() {
   const [totalProductos, totalClientes, totalVentas] = await Promise.all([
@@ -14,34 +18,37 @@ export async function seedDatabase() {
   ])
 
   const hoy = new Date().toISOString()
+  const batch = writeBatch(dbCloud)
+  let huboCambios = false
 
   // --- Productos: se precarga el Catálogo Maestro completo ---
   // Stock inicial en 0 porque el bodeguero aún no ha contado su inventario real;
   // el precio queda editable, precioSugerido solo es una referencia de partida.
   if (totalProductos === 0) {
-    await db.products.bulkAdd(
-      MASTER_PRODUCTS.map((producto, indice) => ({
-        id: `prod-catalogo-${indice + 1}`,
+    MASTER_PRODUCTS.forEach((producto, indice) => {
+      const id = `prod-catalogo-${indice + 1}`
+      batch.set(doc(dbCloud, 'products', id), {
+        id,
         codigoBarras: producto.codigoBarras,
         nombre: producto.nombre,
         categoria: producto.categoria,
         precioVenta: producto.precioSugerido,
         stock: 0,
-        synced: false,
-      }))
-    )
+      })
+    })
+    huboCambios = true
   }
 
   // --- Cliente fiado ---
   let clienteId = 'cust-001'
   if (totalClientes === 0) {
-    await db.customers.add({
+    batch.set(doc(dbCloud, 'customers', clienteId), {
       id: clienteId,
       nombre: 'Juan Pérez',
       telefono: '987654321',
-      deudaTotal: 45.00,
-      synced: false,
+      deudaTotal: 45.0,
     })
+    huboCambios = true
   } else {
     const clienteExistente = await db.customers.toArray()
     clienteId = clienteExistente[0]?.id ?? clienteId
@@ -49,27 +56,29 @@ export async function seedDatabase() {
 
   // --- Ventas de prueba ---
   if (totalVentas === 0) {
-    await db.sales.bulkAdd([
-      {
-        id: 'sale-001',
-        fecha: hoy,
-        total: 70.00,
-        tipoPago: 'efectivo',
-        clienteId: null,
-        synced: false,
-      },
-      {
-        id: 'sale-002',
-        fecha: hoy,
-        total: 50.00,
-        tipoPago: 'fiado',
-        clienteId,
-        synced: false,
-      },
-    ])
+    batch.set(doc(dbCloud, 'sales', 'sale-001'), {
+      id: 'sale-001',
+      fecha: hoy,
+      total: 70.0,
+      tipoPago: 'efectivo',
+      clienteId: null,
+    })
+    batch.set(doc(dbCloud, 'sales', 'sale-002'), {
+      id: 'sale-002',
+      fecha: hoy,
+      total: 50.0,
+      tipoPago: 'fiado',
+      clienteId,
+    })
+    huboCambios = true
   }
 
-  console.log('[seed] Base de datos local verificada/poblada correctamente.')
+  if (huboCambios) {
+    await batch.commit()
+    console.log('[seed] Datos de demo sembrados en Firestore (se reflejan en Dexie vía onSnapshot).')
+  } else {
+    console.log('[seed] Nada que sembrar: ya hay datos.')
+  }
 }
 
 export default seedDatabase

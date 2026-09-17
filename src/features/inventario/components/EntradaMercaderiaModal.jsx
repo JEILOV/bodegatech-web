@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { db } from '../../../db/dexie'
 import { buscarProductoEnFirestorePorCodigo } from '../../../services/firestoreProductsService'
+import {
+  crearProductoEnNube,
+  actualizarProductoEnNube,
+} from '../../../services/firestoreDataService'
 import { ScannerModal } from '../../ventas/components/ScannerModal'
 
 /**
@@ -53,16 +57,24 @@ export function EntradaMercaderiaModal({ onCerrar, onProductoNoEncontrado }) {
     const productoRemoto = await buscarProductoEnFirestorePorCodigo(codigoLimpio)
     if (productoRemoto) {
       const nuevoId = `prod-${Date.now()}`
-      await db.products.add({
-        id: nuevoId,
-        codigoBarras: codigoLimpio,
-        nombre: productoRemoto.nombre,
-        categoria: productoRemoto.categoria,
-        precioVenta: productoRemoto.precioVenta,
-        imagen: productoRemoto.imagen,
-        stock: 0,
-        synced: false, // recién se creó en ESTE dispositivo; falta subir este registro
-      })
+      try {
+        // Cloud Directo: se crea directo en Firestore; el listener de
+        // syncService.js lo reflejará solo en el caché local (Dexie).
+        await crearProductoEnNube({
+          id: nuevoId,
+          codigoBarras: codigoLimpio,
+          nombre: productoRemoto.nombre,
+          categoria: productoRemoto.categoria,
+          precioVenta: productoRemoto.precioVenta,
+          imagen: productoRemoto.imagen,
+          stock: 0,
+        })
+      } catch (error) {
+        console.error('Error al agregar producto encontrado en la red:', error)
+        setMensajeError('No se pudo agregar el producto. Verifica tu conexión a internet.')
+        setVista('manual')
+        return
+      }
       setProductoEncontrado({
         id: nuevoId,
         nombre: productoRemoto.nombre,
@@ -94,9 +106,8 @@ export function EntradaMercaderiaModal({ onCerrar, onProductoNoEncontrado }) {
 
     setGuardando(true)
     try {
-      await db.products.update(productoEncontrado.id, {
+      await actualizarProductoEnNube(productoEncontrado.id, {
         stock: productoEncontrado.stockActual + cantidadNumero,
-        synced: false,
       })
 
       setHistorialSesion((actual) => [
@@ -111,7 +122,7 @@ export function EntradaMercaderiaModal({ onCerrar, onProductoNoEncontrado }) {
       setVista('escaneando')
     } catch (error) {
       console.error('Error al sumar stock:', error)
-      setMensajeError('Ocurrió un error al actualizar el stock. Intenta de nuevo.')
+      setMensajeError('Ocurrió un error al actualizar el stock. Verifica tu conexión a internet.')
     } finally {
       setGuardando(false)
     }

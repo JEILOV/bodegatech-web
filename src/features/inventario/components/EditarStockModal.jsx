@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { db } from '../../../db/dexie'
+import { actualizarProductoEnNube } from '../../../services/firestoreDataService'
 
 export function EditarStockModal({ producto, onCerrar, onStockActualizado }) {
   const [modo, setModo] = useState('ajustar') // 'ajustar' | 'establecer'
@@ -21,15 +21,12 @@ export function EditarStockModal({ producto, onCerrar, onStockActualizado }) {
 
     setGuardando(true)
     try {
-      await db.products.update(producto.id, {
-        stock: nuevoStockCalculado,
-        synced: false,
-      })
+      await actualizarProductoEnNube(producto.id, { stock: nuevoStockCalculado })
       onStockActualizado?.()
       onCerrar()
     } catch (error) {
       console.error('Error al actualizar stock:', error)
-      alert('Ocurrió un error al actualizar el stock.')
+      alert('Ocurrió un error al actualizar el stock. Verifica tu conexión a internet.')
     } finally {
       setGuardando(false)
     }

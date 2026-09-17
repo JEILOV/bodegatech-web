@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/dexie'
+import { registrarVentaEnNube } from '../../services/firestoreDataService'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { ScannerModal } from './components/ScannerModal'
 import { CartItemList } from './components/CartItemList'
@@ -119,53 +120,56 @@ export function VentasPage({ onVentaFinalizada }) {
     const fecha = new Date().toISOString()
 
     try {
-      await db.transaction('rw', db.sales, db.products, db.customers, db.movements, async () => {
-        // 1. Registrar la venta (con items desnormalizados: nombre y precio congelados)
-        await db.sales.add({
+      // Lecturas rápidas desde el caché local (Dexie) para calcular los
+      // valores finales; la escritura real ocurre toda junta en Firestore.
+      const itemsStock = []
+      for (const item of carrito) {
+        const producto = await db.products.get(item.productId)
+        if (producto) {
+          itemsStock.push({
+            productId: item.productId,
+            nuevoStock: Math.max(producto.stock - item.cantidad, 0),
+          })
+        }
+      }
+
+      let movimientoFiado = null
+      let clienteActualizado = null
+      if (modoPago === 'fiado') {
+        movimientoFiado = {
+          id: `mov-${Date.now()}`,
+          customerId: clienteSeleccionadoId,
+          fecha,
+          tipo: 'cargo',
+          monto: total,
+        }
+
+        const cliente = await db.customers.get(clienteSeleccionadoId)
+        clienteActualizado = {
+          id: clienteSeleccionadoId,
+          deudaTotal: (cliente?.deudaTotal || 0) + total,
+        }
+      }
+
+      // Cloud Directo: la venta, el descuento de stock y (si aplica) el
+      // cargo al fiado se escriben JUNTOS y directo en Firestore.
+      await registrarVentaEnNube({
+        venta: {
           id: ventaId,
           fecha,
           total,
           tipoPago: modoPago,
           clienteId: modoPago === 'fiado' ? clienteSeleccionadoId : null,
-          synced: false,
           items: carrito.map((item) => ({
             productId: item.productId,
             nombre: item.nombre,
             precioUnitario: item.precioUnitario,
             cantidad: item.cantidad,
           })),
-        })
-
-        // 2. Descontar stock de cada producto vendido
-        for (const item of carrito) {
-          const producto = await db.products.get(item.productId)
-          if (producto) {
-            await db.products.update(item.productId, {
-              stock: Math.max(producto.stock - item.cantidad, 0),
-              synced: false,
-            })
-          }
-        }
-
-        // 3. Si es fiado, registrar el movimiento y aumentar la deuda del cliente
-        if (modoPago === 'fiado') {
-          await db.movements.add({
-            id: `mov-${Date.now()}`,
-            customerId: clienteSeleccionadoId,
-            fecha,
-            tipo: 'cargo',
-            monto: total,
-            synced: false,
-          })
-
-          const cliente = await db.customers.get(clienteSeleccionadoId)
-          if (cliente) {
-            await db.customers.update(clienteSeleccionadoId, {
-              deudaTotal: (cliente.deudaTotal || 0) + total,
-              synced: false,
-            })
-          }
-        }
+        },
+        itemsStock,
+        movimientoFiado,
+        clienteActualizado,
       })
 
       // Reiniciar estado y volver al Home
@@ -176,7 +180,7 @@ export function VentasPage({ onVentaFinalizada }) {
       onVentaFinalizada?.()
     } catch (error) {
       console.error('Error al registrar la venta:', error)
-      alert('Ocurrió un error al guardar la venta. Intenta de nuevo.')
+      alert('Ocurrió un error al guardar la venta. Verifica tu conexión a internet e intenta de nuevo.')
     } finally {
       setGuardando(false)
     }

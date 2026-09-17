@@ -1,79 +1,22 @@
-import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore'
+import { collection, onSnapshot } from 'firebase/firestore'
 import { db } from '../db/dexie'
 import { dbCloud } from './firebase'
 
 /**
- * Mapa de tablas locales (Dexie) a colecciones remotas (Firestore).
- * Mantenerlo centralizado evita errores de "copiar y pegar" el nombre
- * de la colección al agregar una tabla nueva en el futuro.
+ * MODELO CLOUD DIRECTO: Firestore es la única fuente de escritura de la
+ * app (ver firestoreDataService.js). Este archivo YA NO sube nada: solo
+ * mantiene Dexie como un caché de lectura ultrarrápida, alimentado en
+ * tiempo real por `onSnapshot`. No existe cola de sincronización, ni
+ * campo `synced`, ni estado "pendiente de subir": todo lo que hay en
+ * Dexie es, por definición, un reflejo de lo que ya está confirmado en
+ * Firestore.
  */
-const TABLAS_SINCRONIZABLES = [
+const TABLAS_CACHEADAS = [
   { tablaLocal: db.products, coleccionRemota: 'products' },
   { tablaLocal: db.sales, coleccionRemota: 'sales' },
   { tablaLocal: db.customers, coleccionRemota: 'customers' },
   { tablaLocal: db.movements, coleccionRemota: 'movements' },
 ]
-
-/**
- * Obtiene los registros pendientes (synced === false) de una tabla.
- *
- * IMPORTANTE: no usamos `.where('synced').equals(false)` porque IndexedDB
- * (versión previa a la 2ª edición del spec) no soporta booleanos como
- * claves de índice, y algunos navegadores (Safari/iOS, versiones antiguas
- * de Chrome/Android) lanzan un DexieError al evaluarlo. En vez de eso,
- * recorremos la tabla completa con `.filter()`, que no toca el índice
- * y funciona igual en todos los navegadores. Para el volumen de datos
- * de una bodega (cientos, no millones de registros) el costo es mínimo.
- */
-async function obtenerPendientes(tablaLocal) {
-  return tablaLocal.filter((registro) => registro.synced === false).toArray()
-}
-
-/**
- * Busca en Dexie todos los registros pendientes (synced === false)
- * en products, sales, customers y movements; los sube a Firestore
- * y, tras confirmar cada escritura, los marca como synced: true en local.
- *
- * Segura de llamar repetidamente: si no hay conexión o falla un registro,
- * simplemente queda pendiente para el siguiente intento.
- */
-export async function sincronizarDatosLocales() {
-  let totalSincronizados = 0
-  let totalFallidos = 0
-
-  for (const { tablaLocal, coleccionRemota } of TABLAS_SINCRONIZABLES) {
-    const pendientes = await obtenerPendientes(tablaLocal)
-
-    for (const registro of pendientes) {
-      try {
-        // Se sube el registro tal cual, sin el campo 'synced' local
-        const { synced, ...datosParaSubir } = registro
-
-        await setDoc(doc(dbCloud, coleccionRemota, String(registro.id)), {
-          ...datosParaSubir,
-          actualizadoEn: new Date().toISOString(),
-        })
-
-        await tablaLocal.update(registro.id, { synced: true })
-        totalSincronizados += 1
-      } catch (error) {
-        console.warn(
-          `[sync] No se pudo sincronizar el registro ${registro.id} de "${coleccionRemota}":`,
-          error
-        )
-        totalFallidos += 1
-      }
-    }
-  }
-
-  if (totalSincronizados > 0 || totalFallidos > 0) {
-    console.log(
-      `[sync] Sincronización completada: ${totalSincronizados} subidos, ${totalFallidos} pendientes.`
-    )
-  }
-
-  return { totalSincronizados, totalFallidos }
-}
 
 /**
  * `codigoBarras` es el único campo con índice único (`&codigoBarras`) en
@@ -87,10 +30,10 @@ function normalizarCodigoBarras(codigoBarras) {
 
 /**
  * Entre dos productos de la nube con el mismo codigoBarras, decide cuál
- * conservar. Preferimos el que tenga `actualizadoEn` más reciente (lo
- * escribe syncService al subir cambios); si ninguno lo tiene, o solo uno
- * lo tiene, ese criterio decide; en último caso (ninguno tiene fecha) se
- * conserva el primero que se vio, de forma determinística.
+ * conservar. Preferimos el que tenga `actualizadoEn` más reciente; si
+ * ninguno lo tiene, o solo uno lo tiene, ese criterio decide; en último
+ * caso (ninguno tiene fecha) se conserva el primero que se vio, de forma
+ * determinística.
  */
 function elegirMasReciente(actual, candidato) {
   const fechaActual = actual.actualizadoEn ? Date.parse(actual.actualizadoEn) : NaN
@@ -160,17 +103,13 @@ function sanearRegistros(coleccionRemota, registros) {
 /**
  * Escribe un lote en Dexie con `bulkPut`, pero de forma resiliente: si
  * ALGÚN registro sigue violando una restricción única (por ejemplo, un
- * duplicado que se nos escapó del saneo, o una colisión contra un
- * registro que YA existía en Dexie antes de este snapshot), Dexie lanza
- * un `Dexie.BulkError` que, sin manejar, tira abajo el resto de la
+ * duplicado que se nos escapó del saneo), Dexie lanza un
+ * `Dexie.BulkError` que, sin manejar, tira abajo el resto de la
  * escritura y ensucia la consola con el stack completo.
  *
  * Acá lo atrapamos, y para cada registro que falló lo reintentamos con
  * un `put()` individual; si vuelve a fallar, se descarta ese registro
  * puntual (se loguea) sin afectar a los demás ni relanzar la excepción.
- * Así el conteo final en Dexie queda igual al de los productos válidos
- * de la nube, y jamás vuelve a aparecer un BulkError sin manejar en
- * consola.
  */
 async function escribirEnLoteConResiliencia(tablaLocal, registros) {
   if (registros.length === 0) return
@@ -206,62 +145,29 @@ async function escribirEnLoteConResiliencia(tablaLocal, registros) {
 
 /**
  * Aplica el PRIMER snapshot de una colección como un reemplazo atómico y
- * completo de la tabla local: si Firestore tiene documentos, la tabla de
- * Dexie queda exactamente igual a la nube (ni un registro viejo/huérfano
- * se queda atrás). Todo ocurre dentro de una única transacción de Dexie,
- * así la UI (vía useLiveQuery) nunca ve un estado a medio sincronizar
- * (por ejemplo, un instante con clientes pero sin sus ventas).
+ * completo de la tabla local: se vacía por completo (`clear()`) y se
+ * reescribe con lo que hay en Firestore en ese momento. Como Dexie ya no
+ * origina ninguna escritura propia (modelo Cloud Directo), no existe
+ * ningún registro "pendiente" que preservar: todo lo local es
+ * prescindible y se puede reconstruir 1:1 desde la nube sin perder nada.
+ * Esto también evita de raíz cualquier ConstraintError contra el índice
+ * único `&codigoBarras` por residuos de una carga anterior.
  *
- * Se respetan los registros locales con una edición pendiente de subir
- * (`synced: false`): esos no se tocan, para no perder un abono o una
- * venta hecha offline que todavía no llegó a Firestore.
+ * Todo ocurre dentro de una única transacción de Dexie, así la UI (vía
+ * useLiveQuery) nunca ve un estado a medio sincronizar.
  *
- * RESET LIMPIO PREVIO (fix ConstraintError de `&codigoBarras`): antes de
- * escribir el snapshot, se borran con `bulkDelete` todos los registros
- * locales YA CONFIRMADOS (`synced !== false`). No usamos `tablaLocal.clear()`
- * porque eso borraría también las ediciones pendientes de subir; en cambio
- * calculamos el conjunto exacto de IDs a limpiar excluyendo los pendientes.
- * Esto evita que un producto viejo (mismo `codigoBarras`, distinto id, o
- * cualquier residuo de una sincronización anterior) siga ocupando el
- * índice único cuando `bulkPut` intenta insertar la versión saneada que
- * viene de Firestore. Como consecuencia, ya no hace falta un barrido de
- * "huérfanos" al final: si un registro confirmado ya no vino en este
- * snapshot, simplemente no se vuelve a escribir tras el borrado previo.
- *
- * Antes de escribir, cada lote pasa por `sanearRegistros` (deduplica
+ * Antes de escribir, el lote pasa por `sanearRegistros` (deduplica
  * `codigoBarras` en products) y luego por `escribirEnLoteConResiliencia`
  * (nunca deja un `Dexie.BulkError` sin manejar).
  */
 async function reemplazarTablaDeFormaAtomica(tablaLocal, coleccionRemota, snapshot) {
   await db.transaction('rw', tablaLocal, async () => {
-    const registrosLocales = await tablaLocal.toArray()
-    const idsPendientes = new Set(
-      registrosLocales.filter((registro) => registro.synced === false).map((r) => r.id)
-    )
+    await tablaLocal.clear()
 
-    // Reset limpio: borramos todo lo confirmado (synced !== false) antes
-    // de reinsertar el snapshot. Los pendientes (synced: false) quedan
-    // intactos porque están excluidos de este conjunto.
-    const idsAConservar = idsPendientes
-    const idsALimpiar = registrosLocales
-      .filter((registro) => !idsAConservar.has(registro.id))
-      .map((registro) => registro.id)
-
-    if (idsALimpiar.length > 0) {
-      await tablaLocal.bulkDelete(idsALimpiar)
-    }
-
-    const registrosCrudos = []
-
-    for (const documento of snapshot.docs) {
-      if (idsPendientes.has(documento.id)) {
-        // Edición local sin subir todavía: la nube probablemente está
-        // desactualizada respecto a este registro. La dejamos tal cual
-        // (ya sobrevivió al borrado de arriba, así que no se toca).
-        continue
-      }
-      registrosCrudos.push({ ...documento.data(), id: documento.id, synced: true })
-    }
+    const registrosCrudos = snapshot.docs.map((documento) => ({
+      ...documento.data(),
+      id: documento.id,
+    }))
 
     const registrosParaEscribir = sanearRegistros(coleccionRemota, registrosCrudos)
     await escribirEnLoteConResiliencia(tablaLocal, registrosParaEscribir)
@@ -274,21 +180,14 @@ async function reemplazarTablaDeFormaAtomica(tablaLocal, coleccionRemota, snapsh
 /**
  * Cloud-first en tiempo real: suscribe products, sales, customers y
  * movements a `onSnapshot`. El PRIMER snapshot de cada colección se
- * aplica con `reemplazarTablaDeFormaAtomica` (ver arriba): así cumplimos
- * que, si la nube tiene documentos, la tabla local quede sincronizada de
- * forma atómica ANTES de que `listoParaUsar` se resuelva y App.jsx quite
- * la pantalla de carga. Los snapshots siguientes son cambios en vivo y se
- * aplican de forma incremental con `docChanges()` — no hace falta
- * reescribir toda la tabla en cada actualización.
+ * aplica con `reemplazarTablaDeFormaAtomica` (ver arriba): así, si la
+ * nube tiene documentos, la tabla local queda sincronizada de forma
+ * atómica ANTES de que `listoParaUsar` se resuelva y App.jsx quite la
+ * pantalla de carga. Los snapshots siguientes son cambios en vivo y se
+ * aplican de forma incremental con `docChanges()`.
  *
  * Cada página ya usa `useLiveQuery`, así que la UI se actualiza sola en
  * cuanto Dexie cambia — sin recargar, sin navegar a otra pantalla.
- *
- * Salvaguarda de conflictos: si un registro local tiene una edición
- * pendiente de subir (`synced: false`, por ejemplo un abono hecho offline
- * que todavía no llegó a Firestore), NO lo pisamos con la versión remota
- * -probablemente más vieja-. Dejamos que `sincronizarDatosLocales` la suba
- * y que este mismo listener la confirme después con `synced: true`.
  *
  * @returns {{ cancelarTodo: () => void, listoParaUsar: Promise<void[]> }}
  */
@@ -296,7 +195,7 @@ export function iniciarSincronizacionEnTiempoReal() {
   const cancelaciones = []
   const primerasCargas = []
 
-  for (const { tablaLocal, coleccionRemota } of TABLAS_SINCRONIZABLES) {
+  for (const { tablaLocal, coleccionRemota } of TABLAS_CACHEADAS) {
     let resolverPrimeraCarga
     primerasCargas.push(
       new Promise((resolve) => {
@@ -331,15 +230,8 @@ export function iniciarSincronizacionEnTiempoReal() {
               }
 
               const [registroRemoto] = sanearRegistros(coleccionRemota, [
-                { ...cambio.doc.data(), id: cambio.doc.id, synced: true },
+                { ...cambio.doc.data(), id: cambio.doc.id },
               ])
-
-              const registroLocal = await tablaLocal.get(cambio.doc.id)
-
-              if (registroLocal && registroLocal.synced === false) {
-                // Hay una edición local pendiente de subir: no la pisamos.
-                continue
-              }
 
               try {
                 await tablaLocal.put(registroRemoto)
@@ -378,4 +270,4 @@ export function iniciarSincronizacionEnTiempoReal() {
   }
 }
 
-export default sincronizarDatosLocales
+export default iniciarSincronizacionEnTiempoReal
