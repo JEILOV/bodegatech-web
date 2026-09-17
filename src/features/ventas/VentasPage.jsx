@@ -5,6 +5,7 @@ import { registrarVentaEnNube } from '../../services/firestoreDataService'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { ScannerModal } from './components/ScannerModal'
 import { CartItemList } from './components/CartItemList'
+import { SelectorClienteModal } from './components/SelectorClienteModal'
 
 const DENOMINACIONES_SUGERIDAS = [10, 20, 50]
 
@@ -16,9 +17,12 @@ export function VentasPage({ onVentaFinalizada }) {
   const [montoRecibido, setMontoRecibido] = useState(0)
   const [clienteSeleccionadoId, setClienteSeleccionadoId] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [mostrarSelectorCliente, setMostrarSelectorCliente] = useState(false)
 
   const productos = useLiveQuery(() => db.products.toArray(), [])
   const clientes = useLiveQuery(() => db.customers.toArray(), [])
+
+  const clienteSeleccionado = clientes?.find((cliente) => cliente.id === clienteSeleccionadoId)
 
   const resultadosBusqueda = useMemo(() => {
     if (!productos || busqueda.trim().length === 0) return []
@@ -311,18 +315,16 @@ export function VentasPage({ onVentaFinalizada }) {
             )}
 
             {modoPago === 'fiado' && (
-              <select
-                value={clienteSeleccionadoId}
-                onChange={(evento) => setClienteSeleccionadoId(evento.target.value)}
-                className="input-field"
+              <button
+                type="button"
+                onClick={() => setMostrarSelectorCliente(true)}
+                className="input-field flex items-center justify-between text-left"
               >
-                <option value="">Selecciona un cliente...</option>
-                {clientes?.map((cliente) => (
-                  <option key={cliente.id} value={cliente.id}>
-                    {cliente.nombre}
-                  </option>
-                ))}
-              </select>
+                <span className={clienteSeleccionado ? 'text-dark-text font-medium' : 'text-dark-text-muted'}>
+                  {clienteSeleccionado ? clienteSeleccionado.nombre : 'Selecciona un cliente...'}
+                </span>
+                <span className="text-dark-text-muted">▾</span>
+              </button>
             )}
 
             <button
@@ -340,6 +342,15 @@ export function VentasPage({ onVentaFinalizada }) {
         <ScannerModal
           onCodigoEscaneado={manejarCodigoEscaneado}
           onCerrar={() => setMostrarScanner(false)}
+        />
+      )}
+
+      {mostrarSelectorCliente && (
+        <SelectorClienteModal
+          clientes={clientes}
+          clienteSeleccionadoId={clienteSeleccionadoId}
+          onSeleccionar={setClienteSeleccionadoId}
+          onCerrar={() => setMostrarSelectorCliente(false)}
         />
       )}
     </div>

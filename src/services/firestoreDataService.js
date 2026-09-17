@@ -27,6 +27,18 @@ export function crearClienteEnNube(cliente) {
 }
 
 /**
+ * Actualiza datos personales de un cliente (nombre, teléfono, etc.) directo
+ * en Firestore. NO se usa para tocar `deudaTotal`: esa cifra solo cambia a
+ * través de `registrarVentaEnNube` / `registrarAbonoEnNube`, que la
+ * escriben junto con su movimiento correspondiente en la misma transacción
+ * atómica. Mezclar ambos caminos podría desincronizar la deuda del cliente
+ * de su historial de movimientos.
+ */
+export function actualizarClienteEnNube(id, cambios) {
+  return updateDoc(doc(dbCloud, 'customers', id), cambios)
+}
+
+/**
  * Registra una venta completa como UNA sola escritura atómica en
  * Firestore (`writeBatch`): la venta, el descuento de stock de cada
  * producto vendido y, si es al fiado, el movimiento de cargo y el
@@ -88,6 +100,7 @@ export default {
   crearProductoEnNube,
   actualizarProductoEnNube,
   crearClienteEnNube,
+  actualizarClienteEnNube,
   registrarVentaEnNube,
   registrarAbonoEnNube,
 }
