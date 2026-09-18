@@ -1,16 +1,34 @@
-# React + Vite
+# 🏪 BodegaTech POS
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**BodegaTech** es un Sistema de Punto de Venta (POS) moderno, bajo el modelo SaaS, diseñado para digitalizar y profesionalizar la gestión de bodegas independientes y minimarkets. Construido con una arquitectura *Offline-First* y un catálogo de productos colaborativo (Crowdsourcing).
 
-Currently, two official plugins are available:
+## 🚀 Características Principales
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### 🛒 Módulo de Ventas (Punto de Venta)
+- **Escaneo Ultrarrápido:** Soporte nativo para lectores de códigos de barras físicos y escaneo por cámara móvil. Captura automática de eventos para ingresos en ráfaga.
+- **Venta a Granel:** Soporte para venta fraccionada (peso/litros) o monto exacto, calculando el precio y descontando el stock automáticamente.
+- **Múltiples Métodos de Pago:** Transacciones atómicas soportando Efectivo, Yape, Plin y Fiado.
+- **Protección de Navegación:** Manejo avanzado del `History API` para evitar que cierres accidentales de modales borren el carrito de compras en curso.
 
-## React Compiler
+### 📦 Inventario Inteligente (Red Colaborativa)
+- **Catálogo Global (Crowdsourcing):** Si una bodega registra un producto nuevo en la nube, el resto de la red lo autocompleta al escanearlo, reduciendo el *Data Entry*.
+- **Cascada de Búsqueda (0ms a Nube):** El motor busca primero en la base de datos local (Dexie.js), luego en el catálogo maestro, nube colaborativa (Firestore) y finalmente en una API externa (OpenFoodFacts).
+- **Alertas de Reposición:** Panel inteligente de stock bajo con exportación directa a tabla imprimible/PDF para pedidos a proveedores.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 👥 Módulo de Fiados (Fidelización y Créditos)
+- **Gestión de Deudas:** Asignación de deuda y descuento de inventario en una sola transacción atómica (`writeBatch`).
+- **Recordatorios por WhatsApp:** Generación de enlaces dinámicos para enviar estados de cuenta directamente al WhatsApp del cliente con el nombre de la bodega.
 
-## Expanding the ESLint configuration
+### 🔐 Arquitectura y Seguridad
+- **Multi-Tenant:** Aislamiento estricto de datos por `bodegaId`. Es matemáticamente imposible acceder a inventarios o clientes de otras cuentas.
+- **Offline-First:** Persistencia local instantánea con IndexedDB y sincronización en segundo plano con Firebase cuando hay conexión.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## 🛠️ Stack Tecnológico
+
+- **Frontend:** React.js (Vite)
+- **Estilos:** Tailwind CSS (Diseño SaaS premium, íconos SVG vectoriales)
+- **Base de Datos Local:** Dexie.js (IndexedDB)
+- **Base de Datos Nube / BaaS:** Firebase (Auth, Firestore)
+- **Lectura QR/Barras:** html5-qrcode
