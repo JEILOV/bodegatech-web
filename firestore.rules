@@ -53,11 +53,16 @@ service cloud.firestore {
     match /sales/{saleId} {
       allow read: if request.auth != null && resource.data.bodegaId == request.auth.uid;
 
+      // Métodos de pago válidos para una venta: efectivo, yape, plin y
+      // fiado. Antes la lista solo incluía ['efectivo', 'fiado'], por eso
+      // toda venta con Yape/Plin era rechazada con "Missing or
+      // insufficient permissions" (y, como la venta viaja en un
+      // writeBatch junto con el descuento de stock, se caía TODO el lote).
       allow create: if
         request.auth != null &&
         request.resource.data.bodegaId == request.auth.uid &&
         esMontoValido(request.resource.data.total) &&
-        request.resource.data.tipoPago in ['efectivo', 'fiado'];
+        request.resource.data.tipoPago in ['efectivo', 'yape', 'plin', 'fiado'];
 
       // Las ventas no deberían editarse una vez registradas (solo
       // re-sincronizarse) — igual se exige la pertenencia a la bodega

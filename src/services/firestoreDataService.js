@@ -43,6 +43,15 @@ function obtenerBodegaIdActual() {
   return uid
 }
 
+/**
+ * Métodos de pago que puede tener una VENTA. Debe coincidir con la lista
+ * `tipoPago in [...]` de la regla `match /sales/{saleId}` en
+ * firestore.rules: si se agrega uno acá, hay que agregarlo allá también
+ * (y viceversa). Validarlo antes de llegar a Firestore convierte un
+ * genérico "Missing or insufficient permissions" en un error claro.
+ */
+const TIPOS_PAGO_VENTA = ['efectivo', 'yape', 'plin', 'fiado']
+
 export function crearProductoEnNube(producto) {
   const bodegaId = obtenerBodegaIdActual()
   return setDoc(doc(dbCloud, 'products', producto.id), { ...producto, bodegaId })
@@ -78,7 +87,8 @@ export function actualizarClienteEnNube(id, cambios) {
  * nunca queda una venta registrada sin su descuento de stock, o viceversa.
  *
  * @param {object} params
- * @param {object} params.venta - documento completo a crear en `sales`
+ * @param {object} params.venta - documento a crear en `sales`: { id, fecha (ISO string), total,
+ *   tipoPago: 'efectivo' | 'yape' | 'plin' | 'fiado', clienteId, items[] }. `bodegaId` lo agrega esta función.
  * @param {{ productId: string, nuevoStock: number }[]} params.itemsStock
  * @param {object|null} params.movimientoFiado - documento a crear en `movements`, o null si no es fiado
  * @param {{ id: string, deudaTotal: number }|null} params.clienteActualizado
@@ -90,9 +100,26 @@ export async function registrarVentaEnNube({
   clienteActualizado,
 }) {
   const bodegaId = obtenerBodegaIdActual()
+
+  if (!TIPOS_PAGO_VENTA.includes(venta.tipoPago)) {
+    throw new Error(
+      `[firestoreDataService] tipoPago inválido: "${venta.tipoPago}". Permitidos: ${TIPOS_PAGO_VENTA.join(', ')}.`
+    )
+  }
+
+  // Documento final de la venta. `bodegaId` va AL FINAL del spread para
+  // que siempre gane el uid de la sesión activa, aunque `venta` traiga
+  // otro valor. `clienteId` se normaliza a null cuando no hay cliente
+  // (efectivo / yape / plin) para que el campo exista siempre.
+  const ventaDoc = {
+    ...venta,
+    clienteId: venta.clienteId || null,
+    bodegaId,
+  }
+
   const batch = writeBatch(dbCloud)
 
-  batch.set(doc(dbCloud, 'sales', venta.id), { ...venta, bodegaId })
+  batch.set(doc(dbCloud, 'sales', venta.id), ventaDoc)
 
   for (const { productId, nuevoStock } of itemsStock) {
     batch.update(doc(dbCloud, 'products', productId), { stock: nuevoStock })
