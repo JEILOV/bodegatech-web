@@ -1,5 +1,8 @@
+// NuevoProductoModal.jsx
 import { useEffect, useState } from 'react'
 import { crearProductoEnNube } from '../../../services/firestoreDataService'
+import { buscarProductoEnFirestorePorCodigo, aportarAlCatalogoGlobal } from '../../../services/firestoreProductsService'
+import { db } from '../../../db/dexie'
 import { MASTER_PRODUCTS } from '../../../db/masterCatalog'
 import { buscarProductoPorCodigo } from '../../../services/openFoodFactsApi'
 import { ScannerModal } from '../../ventas/components/ScannerModal'
@@ -9,8 +12,27 @@ import { IconCamara, IconBuscar, IconCerrar, IconCaja, IconBalanza, IconCheckCir
 const CATEGORIA_POR_DEFECTO = 'Abarrotes'
 
 /**
- * Búsqueda instantánea (0ms) en el catálogo maestro local,
- * antes de recurrir a la API externa.
+ * Consulta el inventario REAL de la bodega activa en el caché local
+ * (Dexie/IndexedDB) por código de barras — 0ms, funciona sin internet,
+ * y es la fuente de verdad más confiable: si ya existe, trae precio y
+ * stock ACTUALES de esta bodega, no una sugerencia genérica.
+ *
+ * `codigoBarras` es un índice único (`&codigoBarras`) en la tabla
+ * `products`, así que a lo sumo hay una coincidencia.
+ */
+async function buscarEnInventarioDeBodega(codigoBarras) {
+  try {
+    const producto = await db.products.where('codigoBarras').equals(codigoBarras).first()
+    return producto || null
+  } catch (error) {
+    console.warn('No se pudo consultar el inventario local (Dexie):', error)
+    return null
+  }
+}
+
+/**
+ * Búsqueda instantánea (0ms) en el catálogo maestro local, antes de
+ * recurrir a la nube o a la API externa.
  */
 function buscarEnCatalogoMaestro(codigoBarras) {
   return MASTER_PRODUCTS.find((producto) => producto.codigoBarras === codigoBarras) || null
@@ -35,14 +57,34 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
   const [consultando, setConsultando] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [mensajeApi, setMensajeApi] = useState('')
+  const [yaExisteEnBodega, setYaExisteEnBodega] = useState(false)
 
   async function consultarCodigo(codigo) {
     setCodigoBarras(codigo)
     setConsultando(true)
     setMensajeApi('')
     setImagen(null)
+    setYaExisteEnBodega(false)
 
-    // 1º Catálogo Maestro local (instantáneo, 0ms, funciona sin internet)
+    // 1º Inventario real de la propia bodega (Dexie, caché local — 0ms,
+    // funciona sin internet). Si el producto ya está registrado en ESTA
+    // bodega, autocompletamos con sus datos reales y avisamos, porque
+    // seguir con "Guardar" crearía un duplicado (el índice `&codigoBarras`
+    // de Dexie es único).
+    const productoBodega = await buscarEnInventarioDeBodega(codigo)
+    if (productoBodega) {
+      setNombre(productoBodega.nombre)
+      setCategoria(productoBodega.categoria)
+      setPrecioVenta(String(productoBodega.precioVenta))
+      setStock(String(productoBodega.stock))
+      setImagen(productoBodega.imagen || null)
+      setMensajeApi('Producto encontrado: ya está en tu inventario')
+      setYaExisteEnBodega(true)
+      setConsultando(false)
+      return
+    }
+
+    // 2º Catálogo Maestro local (instantáneo, 0ms, funciona sin internet)
     const productoLocal = buscarEnCatalogoMaestro(codigo)
     if (productoLocal) {
       setNombre(productoLocal.nombre)
@@ -53,7 +95,23 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
       return
     }
 
-    // 2º Open Food Facts (requiere internet)
+    // 3º Catálogo Colaborativo en la nube (masterCatalog en Firestore):
+    // si OTRO bodeguero en otra cuenta ya registró este código, lo
+    // autocompletamos sin tener que consultar una API externa.
+    const productoColaborativo = await buscarProductoEnFirestorePorCodigo(codigo)
+    if (productoColaborativo) {
+      setNombre(productoColaborativo.nombre)
+      setCategoria(productoColaborativo.categoria)
+      if (productoColaborativo.precioVenta) {
+        setPrecioVenta(String(productoColaborativo.precioVenta))
+      }
+      setImagen(productoColaborativo.imagen)
+      setMensajeApi('Producto encontrado en el Catálogo Colaborativo (otros bodegueros)')
+      setConsultando(false)
+      return
+    }
+
+    // 4º Open Food Facts (requiere internet)
     const resultadoApi = await buscarProductoPorCodigo(codigo)
     if (resultadoApi) {
       setNombre(resultadoApi.nombre)
@@ -64,7 +122,7 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
       return
     }
 
-    // 3º Registro manual
+    // 5º Registro manual
     setMensajeApi('No se encontró información. Completa los datos manualmente.')
     setConsultando(false)
   }
@@ -108,6 +166,16 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
       return
     }
 
+    // El código de barras ya pertenece a un producto de ESTA bodega
+    // (detectado en el paso 1 de consultarCodigo): guardar chocaría con
+    // el índice único `&codigoBarras` de Dexie y, peor, duplicaría el
+    // producto en Firestore. Cortamos acá con un mensaje claro en vez
+    // de dejar que falle la escritura más abajo.
+    if (yaExisteEnBodega) {
+      alert('Este código de barras ya pertenece a un producto de tu inventario. Edítalo desde la lista de productos en vez de crear uno nuevo.')
+      return
+    }
+
     setGuardando(true)
     try {
       const nuevoProductoId = `prod-${Date.now()}`
@@ -118,6 +186,7 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
       // producto, para nunca chocar con el índice único `&codigoBarras`
       // de Dexie (misma convención que usa syncService.js al sanear
       // productos que llegan sin código desde la nube).
+      const tieneCodigoReal = Boolean(codigoBarras.trim())
       const codigoBarrasFinal = codigoBarras.trim() || `SIN-CODIGO-${nuevoProductoId}`
 
       await crearProductoEnNube({
@@ -131,6 +200,22 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
         tipoVenta,
         unidadMedida: tipoVenta === 'granel' ? unidadMedida : null,
       })
+
+      // Aporte al Catálogo Colaborativo: solo si el producto tiene un
+      // código de barras real (no uno sintético "SIN-CODIGO-..."), para
+      // no ensuciar 'masterCatalog' con códigos que no le sirven a
+      // ningún otro bodeguero. Se dispara sin `await` a propósito: es
+      // un aporte de "mejor esfuerzo" que nunca debe demorar ni hacer
+      // fallar el guardado del producto para el usuario actual.
+      if (tieneCodigoReal) {
+        aportarAlCatalogoGlobal(
+          codigoBarrasFinal,
+          nombre.trim(),
+          categoria.trim() || CATEGORIA_POR_DEFECTO,
+          imagen || null
+        )
+      }
+
       onProductoCreado?.(nuevoProductoId)
       onCerrar()
     } catch (error) {
@@ -203,8 +288,12 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
             <p className="text-xs text-dark-text-muted text-center">Buscando producto...</p>
           )}
           {mensajeApi && !consultando && (
-            <p className="flex items-center justify-center gap-1.5 text-xs text-dark-text-muted text-center">
-              {mensajeApi.startsWith('Producto encontrado') && (
+            <p
+              className={`flex items-center justify-center gap-1.5 text-xs text-center ${
+                yaExisteEnBodega ? 'text-amber-600 font-medium' : 'text-dark-text-muted'
+              }`}
+            >
+              {mensajeApi.startsWith('Producto encontrado') && !yaExisteEnBodega && (
                 <IconCheckCirculo className="w-3.5 h-3.5 text-success-600 shrink-0" />
               )}
               {mensajeApi}
@@ -318,12 +407,12 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
         <div className="p-5 pt-0 flex-shrink-0">
           <button
             onClick={manejarGuardar}
-            disabled={guardando}
+            disabled={guardando || yaExisteEnBodega}
             className="w-full bg-success-500 hover:bg-success-600 text-white font-semibold py-3.5
                        rounded-xl shadow-md shadow-success-500/20 active:scale-95 transition-all duration-150
                        disabled:opacity-50 disabled:pointer-events-none"
           >
-            {guardando ? 'Guardando...' : 'Guardar producto'}
+            {guardando ? 'Guardando...' : yaExisteEnBodega ? 'Ya está en tu inventario' : 'Guardar producto'}
           </button>
         </div>
       </div>
