@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/dexie'
 import { registrarVentaEnNube } from '../../services/firestoreDataService'
@@ -14,6 +14,7 @@ const DENOMINACIONES_SUGERIDAS = [10, 20, 50]
 
 export function VentasPage({ onVentaFinalizada }) {
   const [busqueda, setBusqueda] = useState('')
+  const [errorBusqueda, setErrorBusqueda] = useState('')
   const [carrito, setCarrito] = useState([])
   const [mostrarScanner, setMostrarScanner] = useState(false)
   const [modoPago, setModoPago] = useState(null) // 'efectivo' | 'yape' | 'fiado' | null
@@ -23,21 +24,28 @@ export function VentasPage({ onVentaFinalizada }) {
   const [mostrarSelectorCliente, setMostrarSelectorCliente] = useState(false)
   // Producto a granel pendiente de que el bodeguero confirme peso/monto
   // antes de entrar al carrito, o item del carrito que se está corrigiendo:
-  // { producto, cantidadInicial? }
+  // { producto, cantidadInicial?, esEdicion }
   const [granelEnEdicion, setGranelEnEdicion] = useState(null)
 
-  // Botón/gesto "Atrás" del celular: cierra el modal abierto (Escáner o
-  // Cantidad a granel) en vez de salir de la pantalla de Venta.
+  // Input del buscador: se mantiene enfocado para poder seguir escaneando
+  // con la pistola/lector USB después de cada lectura.
+  const inputBusquedaRef = useRef(null)
+  // true si el modal de granel se abrió por una lectura del lector; al
+  // cerrarse, devolvemos el foco al buscador.
+  const refocusTrasGranelRef = useRef(false)
+
+  // Botón/gesto "Atrás" del celular: cierra la capa superior abierta
+  // (Escáner, Cantidad a granel o Selector de cliente) en vez de salir de
+  // la pantalla de Venta.
   //
-  // El Selector de cliente NO se registra acá a propósito. Cuando un modal
-  // registrado con useBackableState se cierra desde la UI, el hook llama a
-  // `window.history.back()`; ese `popstate` también lo recibe el hook de
-  // App.jsx (el de la pantalla completa) y lo interpreta como un "Atrás"
-  // del usuario: manda a Home, desmonta VentasPage y la venta al fiado
-  // nunca llega a guardarse. Sin entrada propia en el historial, elegir un
-  // cliente solo cambia estado local y la pantalla de venta se mantiene.
+  // useBackableState ahora distingue el "Atrás" real del usuario de los
+  // cierres desde la UI (botón "X", elegir un cliente, confirmar cantidad):
+  // estos últimos consumen su entrada del historial en silencio, sin
+  // propagar `popstate` a App.jsx, así que la pantalla de Venta se
+  // mantiene y la venta al fiado puede guardarse con normalidad.
   useBackableState(mostrarScanner, () => setMostrarScanner(false))
   useBackableState(Boolean(granelEnEdicion), () => setGranelEnEdicion(null))
+  useBackableState(mostrarSelectorCliente, () => setMostrarSelectorCliente(false))
 
   const productos = useLiveQuery(() => db.products.toArray(), [])
   const clientes = useLiveQuery(() => db.customers.toArray(), [])
@@ -55,7 +63,7 @@ export function VentasPage({ onVentaFinalizada }) {
     return productos.filter(
       (producto) =>
         producto.nombre.toLowerCase().includes(termino) ||
-        producto.codigoBarras === busqueda.trim()
+        String(producto.codigoBarras ?? '').trim() === busqueda.trim()
     )
   }, [productos, busqueda])
 
@@ -67,11 +75,20 @@ export function VentasPage({ onVentaFinalizada }) {
   const vuelto = modoPago === 'efectivo' ? Math.max(montoRecibido - total, 0) : 0
   const infoYape = obtenerInfoMetodoPago('yape')
 
+  // Cuando se cierra el modal de granel abierto por el lector, el foco
+  // vuelve al buscador para seguir escaneando.
+  useEffect(() => {
+    if (!granelEnEdicion && refocusTrasGranelRef.current) {
+      refocusTrasGranelRef.current = false
+      inputBusquedaRef.current?.focus()
+    }
+  }, [granelEnEdicion])
+
   /**
    * Handler del Selector de cliente. Hace EXACTAMENTE dos cosas: asigna el
-   * cliente a la venta y cierra únicamente ese modal. No guarda, no navega
-   * y no toca el historial: el guardado ocurre solo cuando el bodeguero
-   * presiona "CONFIRMAR VENTA FIADA" (`finalizarVenta`).
+   * cliente a la venta y cierra únicamente ese modal. No guarda ni navega:
+   * el guardado ocurre solo cuando el bodeguero presiona "CONFIRMAR VENTA
+   * FIADA" (`finalizarVenta`).
    *
    * Recibe el id (no el objeto) porque así lo reporta SelectorClienteModal,
    * tanto al elegir de la lista como al crear un cliente nuevo al vuelo.
@@ -169,7 +186,10 @@ export function VentasPage({ onVentaFinalizada }) {
   }
 
   function manejarCodigoEscaneado(codigo) {
-    const producto = productos?.find((p) => p.codigoBarras === codigo)
+    const codigoLimpio = String(codigo).trim()
+    const producto = productos?.find(
+      (p) => String(p.codigoBarras ?? '').trim() === codigoLimpio
+    )
     if (producto) {
       agregarProductoAlCarrito(producto)
     } else {
@@ -178,15 +198,53 @@ export function VentasPage({ onVentaFinalizada }) {
     setMostrarScanner(false)
   }
 
-  function manejarBusquedaEnter(evento) {
+  /**
+   * Captura del lector (pistola USB / cámara en modo teclado): envía los
+   * caracteres del código seguidos de Enter. Con el foco en el buscador:
+   *  - se frena el Enter (preventDefault + stopPropagation) para que no
+   *    dispare submits ni atajos de ningún ancestro;
+   *  - si coincide con un `codigoBarras`, el producto entra al carrito, se
+   *    limpia el buscador y el foco se queda en el input para el
+   *    siguiente escaneo.
+   */
+  function manejarBusquedaKeyDown(evento) {
     if (evento.key !== 'Enter') return
-    // Soporta lector USB: escribe el código y envía Enter automáticamente
-    const productoPorCodigo = productos?.find((p) => p.codigoBarras === busqueda.trim())
-    if (productoPorCodigo) {
-      agregarProductoAlCarrito(productoPorCodigo)
-    } else if (resultadosBusqueda.length === 1) {
-      agregarProductoAlCarrito(resultadosBusqueda[0])
+    // No interferir con la confirmación de una composición IME.
+    if (evento.nativeEvent?.isComposing) return
+
+    evento.preventDefault()
+    evento.stopPropagation()
+
+    const codigo = busqueda.trim()
+    if (!codigo) return
+
+    const productoPorCodigo = productos?.find(
+      (p) => String(p.codigoBarras ?? '').trim() === codigo
+    )
+    // Respaldo para búsqueda manual por nombre: si solo hay un resultado,
+    // Enter lo agrega.
+    const producto =
+      productoPorCodigo ?? (resultadosBusqueda.length === 1 ? resultadosBusqueda[0] : null)
+
+    if (producto) {
+      setErrorBusqueda('')
+      if (producto.tipoVenta === 'granel') {
+        // El modal de granel toma el foco; al cerrarse lo devolvemos.
+        refocusTrasGranelRef.current = true
+      }
+      agregarProductoAlCarrito(producto) // también limpia el buscador
+      inputBusquedaRef.current?.focus()
+      return
     }
+
+    if (resultadosBusqueda.length === 0) {
+      // Código desconocido: se limpia para que el siguiente escaneo no se
+      // concatene con este, y se avisa sin bloquear con un alert().
+      setErrorBusqueda(`No se encontró ningún producto con "${codigo}".`)
+      setBusqueda('')
+      inputBusquedaRef.current?.focus()
+    }
+    // Si hay varios resultados por nombre, se deja que el bodeguero elija.
   }
 
   function incrementarCantidad(productId) {
@@ -313,16 +371,28 @@ export function VentasPage({ onVentaFinalizada }) {
       </header>
 
       <main className="px-4 pt-4 space-y-4">
-        {/* Búsqueda manual / lector USB */}
+        {/* Búsqueda manual / lector USB o de cámara (teclado + Enter) */}
         <div className="relative">
           <input
+            ref={inputBusquedaRef}
             type="text"
             value={busqueda}
-            onChange={(evento) => setBusqueda(evento.target.value)}
-            onKeyDown={manejarBusquedaEnter}
+            onChange={(evento) => {
+              setBusqueda(evento.target.value)
+              if (errorBusqueda) setErrorBusqueda('')
+            }}
+            onKeyDown={manejarBusquedaKeyDown}
             placeholder="Buscar por nombre o código de barras..."
+            autoComplete="off"
+            enterKeyHint="search"
             className="input-field"
           />
+
+          {errorBusqueda && (
+            <p className="text-xs text-red-600 mt-1 px-1" role="alert">
+              {errorBusqueda}
+            </p>
+          )}
 
           {resultadosBusqueda.length > 0 && (
             <ul className="absolute z-10 w-full bg-white border border-slate-200 rounded-xl mt-1 shadow-md max-h-60 overflow-y-auto">

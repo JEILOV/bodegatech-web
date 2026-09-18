@@ -1,86 +1,120 @@
 import { useEffect, useRef } from 'react'
 
 /**
- * Sincroniza un estado local "abierto/cerrado" (una pantalla, un modal,
- * un panel, etc.) con el historial de navegación del navegador, para que
- * el botón/gesto "Atrás" nativo del celular cierre esa capa en vez de
- * salir de la app o refrescar la página.
+ * Sincroniza un estado local "abierto/cerrado" (pantalla, modal, panel...)
+ * con el historial del navegador, para que el botón/gesto "Atrás" del
+ * celular cierre esa capa en vez de salir de la app.
  *
- * Cómo funciona (arquitectura 100% online, sin router):
- * - Cuando `isOpen` pasa de `false` a `true`, se hace
- *   `window.history.pushState(...)`: esto agrega UNA entrada al
- *   historial del navegador, representando esa capa.
- * - Si el usuario cierra la capa desde la UI (ej. botón "X" o "Volver"),
- *   `isOpen` pasa a `false` y el hook consume esa entrada llamando a
- *   `window.history.back()`, para no dejar entradas "fantasma" que
- *   descalibren el conteo de Atrás.
- * - Si el usuario presiona el botón/gesto "Atrás" del celular, el
- *   navegador dispara `popstate` (SIN recargar ni salir del sitio). El
- *   hook detecta que la entrada que se acaba de "gastar" era la suya y
- *   llama a `onClose()` para que React cierre esa misma capa —sin volver
- *   a tocar el historial, porque el navegador ya lo hizo.
+ * ── Qué se corrigió ────────────────────────────────────────────────────
+ * Antes, cada instancia del hook escuchaba `popstate` por su cuenta. Al
+ * cerrar un modal desde la UI (botón "X", elegir una opción...) el hook
+ * llamaba a `history.back()`, el navegador disparaba `popstate` y TODAS
+ * las instancias lo interpretaban como "el usuario presionó Atrás": la de
+ * App.jsx mandaba a Home y desmontaba la pantalla actual.
  *
- * Se puede usar tanto para pantallas completas (Ventas, Inventario,
- * Fiados, Cierre de Caja) como para modales dentro de esas pantallas
- * (Detalle de Venta, Detalle de Cliente, Nuevo Producto, etc.). Al ser
- * apilable, si hay una pantalla Y un modal abiertos, cada uno tiene su
- * propia entrada de historial: el primer "Atrás" cierra el modal, el
- * segundo regresa a Home.
+ * Ahora hay UN solo listener global de `popstate` y una PILA de capas
+ * abiertas:
  *
- * @param {boolean} isOpen - si la capa (pantalla/modal) está abierta.
- * @param {() => void} onClose - función que cierra la capa (setState a
- *   su valor "cerrado"). Se invoca SOLO cuando el cierre viene del botón
- *   Atrás del navegador/celular; los cierres manuales desde la UI ya los
- *   maneja quien llama al hook con su propio onClick.
+ * - Cierre desde la UI (isOpen pasa a false o el componente se desmonta):
+ *   se saca la capa de la pila, se consume su entrada del historial con
+ *   `history.back()` y el `popstate` resultante se marca como
+ *   "programático" y se IGNORA. Nadie recibe onClose, así que App.jsx no
+ *   se entera y el usuario se queda en la pantalla actual.
+ *
+ * - Botón "Atrás" real: llega un `popstate` no marcado; se cierra
+ *   ÚNICAMENTE la capa de arriba de la pila (el modal si hay uno abierto;
+ *   si no, la pantalla). Antes, con pantalla + modal abiertos, un solo
+ *   Atrás cerraba ambos.
+ *
+ * Los retrocesos programáticos que ocurren en el mismo ciclo (por ejemplo
+ * al desmontar una pantalla con un modal abierto) se agrupan en un solo
+ * `history.go(-n)`, que dispara un único `popstate`.
+ *
+ * @param {boolean} isOpen - si la capa está abierta.
+ * @param {() => void} onClose - cierra la capa (setState a "cerrado").
+ *   Se invoca SOLO cuando el cierre viene del botón Atrás del sistema; los
+ *   cierres desde la UI los maneja quien llama con su propio onClick.
  */
+
+// ── Estado global compartido por todas las instancias del hook ──────────
+const pilaDeCapas = []
+let popstatesAIgnorar = 0
+let retrocesosPendientes = 0
+let retrocesoProgramado = false
+let temporizadorSeguridad = null
+
+function limpiarBanderaIgnorar() {
+  popstatesAIgnorar = 0
+  clearTimeout(temporizadorSeguridad)
+  temporizadorSeguridad = null
+}
+
+/**
+ * Consume `n` entradas del historial sin que el resto de la app lo note.
+ * Agrupa varias llamadas del mismo ciclo en un único history.go(-n).
+ */
+function retrocederSilenciosamente() {
+  retrocesosPendientes += 1
+  if (retrocesoProgramado) return
+  retrocesoProgramado = true
+
+  queueMicrotask(() => {
+    retrocesoProgramado = false
+    const cantidad = retrocesosPendientes
+    retrocesosPendientes = 0
+    if (cantidad === 0) return
+
+    popstatesAIgnorar += 1
+    // Seguro anti-bloqueo: si por algún motivo el navegador no emite el
+    // popstate esperado, no dejamos la bandera "pegada" y así no se
+    // traga un Atrás real del usuario.
+    clearTimeout(temporizadorSeguridad)
+    temporizadorSeguridad = setTimeout(limpiarBanderaIgnorar, 1000)
+
+    window.history.go(-cantidad)
+  })
+}
+
+function manejarPopState() {
+  // Fue un retroceso provocado por nosotros (cierre desde la UI): se
+  // ignora por completo, sin cerrar ninguna capa ni propagar nada.
+  if (popstatesAIgnorar > 0) {
+    popstatesAIgnorar -= 1
+    if (popstatesAIgnorar === 0) limpiarBanderaIgnorar()
+    return
+  }
+
+  // Atrás real del usuario: cierra solo la capa más reciente.
+  const capa = pilaDeCapas.pop()
+  capa?.cerrar()
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', manejarPopState)
+}
+
 export function useBackableState(isOpen, onClose) {
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
 
-  // true mientras la entrada "en la punta" del historial del navegador
-  // sea la que empujamos nosotros para esta capa.
-  const entradaPropiaRef = useRef(false)
-
   useEffect(() => {
-    if (isOpen && !entradaPropiaRef.current) {
-      // Se abrió la capa desde la UI: dejamos "marcado" el historial.
-      window.history.pushState({ appLayer: true }, '')
-      entradaPropiaRef.current = true
-      return
-    }
+    if (!isOpen) return undefined
 
-    if (!isOpen && entradaPropiaRef.current) {
-      // Se cerró desde la UI (no desde Atrás): consumimos la entrada
-      // para que el historial quede sincronizado con el estado real.
-      entradaPropiaRef.current = false
-      window.history.back()
+    const capa = { cerrar: () => onCloseRef.current?.() }
+    pilaDeCapas.push(capa)
+    window.history.pushState({ appLayer: true }, '')
+
+    // Se ejecuta cuando isOpen vuelve a false o el componente se desmonta.
+    return () => {
+      const indice = pilaDeCapas.indexOf(capa)
+      // Si ya no está en la pila, la cerró el botón Atrás real y el
+      // navegador ya consumió su entrada: no hay nada más que hacer.
+      if (indice === -1) return
+
+      // Cierre desde la UI: la sacamos de la pila y consumimos su entrada
+      // del historial sin que el popstate llegue a otras capas.
+      pilaDeCapas.splice(indice, 1)
+      retrocederSilenciosamente()
     }
   }, [isOpen])
-
-  // Si el componente se desmonta mientras la capa seguía "abierta" en el
-  // historial (ej. la pantalla padre navega a otro lado sin pasar por
-  // onClose), igual liberamos esa entrada para no descalibrar el conteo
-  // de "Atrás" de capas futuras.
-  useEffect(() => {
-    return () => {
-      if (entradaPropiaRef.current) {
-        entradaPropiaRef.current = false
-        window.history.back()
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    function manejarPopState() {
-      // Solo reaccionamos si la entrada que el navegador acaba de
-      // "gastar" con Atrás era la nuestra. Si no, no es nuestro turno.
-      if (!entradaPropiaRef.current) return
-      entradaPropiaRef.current = false
-      onCloseRef.current?.()
-    }
-
-    window.addEventListener('popstate', manejarPopState)
-    return () => window.removeEventListener('popstate', manejarPopState)
-  }, [])
 }
