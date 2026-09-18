@@ -26,18 +26,28 @@ export function VentasPage({ onVentaFinalizada }) {
   // { producto, cantidadInicial? }
   const [granelEnEdicion, setGranelEnEdicion] = useState(null)
 
-  // Botón/gesto "Atrás" del celular: primero cierra el modal que esté
-  // abierto (Escáner, Selector de cliente o Cantidad a granel) en vez de
-  // salir de la pantalla de Venta. Cada modal tiene su propia entrada en
-  // el historial del navegador.
+  // Botón/gesto "Atrás" del celular: cierra el modal abierto (Escáner o
+  // Cantidad a granel) en vez de salir de la pantalla de Venta.
+  //
+  // El Selector de cliente NO se registra acá a propósito. Cuando un modal
+  // registrado con useBackableState se cierra desde la UI, el hook llama a
+  // `window.history.back()`; ese `popstate` también lo recibe el hook de
+  // App.jsx (el de la pantalla completa) y lo interpreta como un "Atrás"
+  // del usuario: manda a Home, desmonta VentasPage y la venta al fiado
+  // nunca llega a guardarse. Sin entrada propia en el historial, elegir un
+  // cliente solo cambia estado local y la pantalla de venta se mantiene.
   useBackableState(mostrarScanner, () => setMostrarScanner(false))
-  useBackableState(mostrarSelectorCliente, () => setMostrarSelectorCliente(false))
   useBackableState(Boolean(granelEnEdicion), () => setGranelEnEdicion(null))
 
   const productos = useLiveQuery(() => db.products.toArray(), [])
   const clientes = useLiveQuery(() => db.customers.toArray(), [])
 
   const clienteSeleccionado = clientes?.find((cliente) => cliente.id === clienteSeleccionadoId)
+  // Un cliente recién creado desde el selector puede tardar un instante en
+  // llegar a Dexie (viaja por Firestore -> onSnapshot); el id ya es válido
+  // aunque `clienteSeleccionado` todavía sea undefined.
+  const hayClienteAsignado = Boolean(clienteSeleccionadoId)
+  const ventaFiadaSinCliente = modoPago === 'fiado' && !hayClienteAsignado
 
   const resultadosBusqueda = useMemo(() => {
     if (!productos || busqueda.trim().length === 0) return []
@@ -56,6 +66,20 @@ export function VentasPage({ onVentaFinalizada }) {
 
   const vuelto = modoPago === 'efectivo' ? Math.max(montoRecibido - total, 0) : 0
   const infoYape = obtenerInfoMetodoPago('yape')
+
+  /**
+   * Handler del Selector de cliente. Hace EXACTAMENTE dos cosas: asigna el
+   * cliente a la venta y cierra únicamente ese modal. No guarda, no navega
+   * y no toca el historial: el guardado ocurre solo cuando el bodeguero
+   * presiona "CONFIRMAR VENTA FIADA" (`finalizarVenta`).
+   *
+   * Recibe el id (no el objeto) porque así lo reporta SelectorClienteModal,
+   * tanto al elegir de la lista como al crear un cliente nuevo al vuelo.
+   */
+  function manejarClienteSeleccionado(clienteId) {
+    setClienteSeleccionadoId(clienteId)
+    setMostrarSelectorCliente(false)
+  }
 
   function agregarProductoAlCarrito(producto) {
     // Producto a granel: nunca se agrega directo con cantidad 1 (no tiene
@@ -188,6 +212,7 @@ export function VentasPage({ onVentaFinalizada }) {
   }
 
   async function finalizarVenta() {
+    if (guardando) return // evita doble toque mientras Firestore responde
     if (carrito.length === 0) return
     if (modoPago === 'fiado' && !clienteSeleccionadoId) {
       alert('Selecciona un cliente para registrar la venta al fiado.')
@@ -235,7 +260,10 @@ export function VentasPage({ onVentaFinalizada }) {
       }
 
       // Cloud Directo: la venta, el descuento de stock y (si aplica) el
-      // cargo al fiado se escriben JUNTOS y directo en Firestore. Con
+      // cargo al fiado se escriben JUNTOS y directo en Firestore. El
+      // `await` es deliberado: el carrito, el cliente y la pantalla NO se
+      // tocan hasta que el lote se confirme. Si falla, se cae al `catch`
+      // con todo intacto para que el bodeguero pueda reintentar. Con
       // Yape/Plin no hay cargo a un cliente ni cambio que calcular: la
       // venta simplemente se registra con tipoPago: 'yape' para que el
       // Cierre de Caja la totalice por separado del efectivo.
@@ -260,7 +288,8 @@ export function VentasPage({ onVentaFinalizada }) {
         clienteActualizado,
       })
 
-      // Reiniciar estado y volver al Home
+      // Solo llegamos acá si la transacción terminó con éxito:
+      // ahora sí se limpia el estado y se vuelve al Home.
       setCarrito([])
       setModoPago(null)
       setMontoRecibido(0)
@@ -418,24 +447,43 @@ export function VentasPage({ onVentaFinalizada }) {
             )}
 
             {modoPago === 'fiado' && (
-              <button
-                type="button"
-                onClick={() => setMostrarSelectorCliente(true)}
-                className="input-field flex items-center justify-between text-left"
-              >
-                <span className={clienteSeleccionado ? 'text-dark-text font-medium' : 'text-dark-text-muted'}>
-                  {clienteSeleccionado ? clienteSeleccionado.nombre : 'Selecciona un cliente...'}
-                </span>
-                <span className="text-dark-text-muted">▾</span>
-              </button>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setMostrarSelectorCliente(true)}
+                  disabled={guardando}
+                  className="input-field flex items-center justify-between text-left"
+                >
+                  <span className={hayClienteAsignado ? 'text-dark-text font-medium' : 'text-dark-text-muted'}>
+                    {hayClienteAsignado
+                      ? clienteSeleccionado?.nombre || 'Cliente seleccionado'
+                      : 'Selecciona un cliente...'}
+                  </span>
+                  <span className="text-dark-text-muted text-sm">
+                    {hayClienteAsignado ? 'Cambiar ▾' : '▾'}
+                  </span>
+                </button>
+
+                {hayClienteAsignado && (
+                  <p className="text-xs text-dark-text-muted">
+                    Se sumarán <span className="font-semibold text-dark-text">{formatCurrency(total)}</span> a la
+                    deuda de {clienteSeleccionado?.nombre || 'este cliente'} al confirmar la venta.
+                  </p>
+                )}
+              </div>
             )}
 
             <button
+              type="button"
               onClick={finalizarVenta}
-              disabled={!modoPago || guardando}
+              disabled={!modoPago || guardando || ventaFiadaSinCliente}
               className="btn-success w-full text-lg"
             >
-              {guardando ? 'Guardando...' : 'CONFIRMAR VENTA'}
+              {guardando
+                ? 'Guardando...'
+                : modoPago === 'fiado'
+                  ? 'CONFIRMAR VENTA FIADA'
+                  : 'CONFIRMAR VENTA'}
             </button>
           </section>
         )}
@@ -452,7 +500,7 @@ export function VentasPage({ onVentaFinalizada }) {
         <SelectorClienteModal
           clientes={clientes}
           clienteSeleccionadoId={clienteSeleccionadoId}
-          onSeleccionar={setClienteSeleccionadoId}
+          onSeleccionar={manejarClienteSeleccionado}
           onCerrar={() => setMostrarSelectorCliente(false)}
         />
       )}
