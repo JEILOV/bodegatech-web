@@ -9,6 +9,7 @@ import { VentasPage } from './features/ventas/VentasPage'
 import { CierreCajaPage } from './features/ventas/CierreCajaPage'
 import { FiadosPage } from './features/fiados/FiadosPage'
 import { InventarioPage } from './features/inventario/InventarioPage'
+import { SuscripcionProvider } from './features/suscripcion/SuscripcionProvider'
 
 // Tiempo máximo que esperamos la primera descarga de Firestore antes de
 // continuar igual con lo que haya en Dexie (por ejemplo, sin internet).
@@ -167,41 +168,48 @@ function App() {
     return <PantallaDeCarga mensaje="Sincronizando con la nube..." />
   }
 
+  // El plan (Free/Pro) y el modal de planes viven por encima de todas las
+  // pantallas: cualquier función Pro puede abrir PlanesPage sin desmontar
+  // la pantalla en la que el usuario estaba trabajando. `key={usuario.uid}`
+  // reinicia el estado del plan al cambiar de cuenta, por la misma razón
+  // que las pantallas de abajo.
+  let contenido
+
   if (pantalla === 'ventas') {
-    return <VentasPage key={usuario.uid} onVentaFinalizada={() => setPantalla('home')} />
-  }
-
-  if (pantalla === 'fiados') {
-    return <FiadosPage key={usuario.uid} onVolver={() => setPantalla('home')} />
-  }
-
-  if (pantalla === 'cierre') {
-    return <CierreCajaPage key={usuario.uid} onVolver={() => setPantalla('home')} />
-  }
-
-  if (pantalla === 'inventario') {
-    return <InventarioPage key={usuario.uid} onVolver={() => setPantalla('home')} />
+    contenido = <VentasPage key={usuario.uid} onVentaFinalizada={() => setPantalla('home')} />
+  } else if (pantalla === 'fiados') {
+    contenido = <FiadosPage key={usuario.uid} onVolver={() => setPantalla('home')} />
+  } else if (pantalla === 'cierre') {
+    contenido = <CierreCajaPage key={usuario.uid} onVolver={() => setPantalla('home')} />
+  } else if (pantalla === 'inventario') {
+    contenido = <InventarioPage key={usuario.uid} onVolver={() => setPantalla('home')} />
+  } else {
+    contenido = (
+      <HomeScreen
+        // `key={usuario.uid}` fuerza un remount COMPLETO de HomeScreen (y de
+        // MetricsHeader, QuickActions, CloudStatusPanel dentro de él) cada
+        // vez que cambia la cuenta autenticada. Sin esto, si React decidiera
+        // reutilizar la misma instancia del componente entre una cuenta y
+        // otra, los `useLiveQuery` podrían quedar mostrando, aunque sea un
+        // instante, el último valor calculado para la bodega anterior en
+        // vez de arrancar limpios junto con el Dexie ya filtrado por
+        // `bodegaId` (ver syncService.js). Se aplica igual en las demás
+        // pantallas de arriba, por la misma razón.
+        key={usuario.uid}
+        usuario={usuario}
+        onCerrarSesion={manejarCerrarSesion}
+        onNuevaVenta={() => setPantalla('ventas')}
+        onVerFiados={() => setPantalla('fiados')}
+        onVerInventario={() => setPantalla('inventario')}
+        onVerCierre={() => setPantalla('cierre')}
+      />
+    )
   }
 
   return (
-    <HomeScreen
-      // `key={usuario.uid}` fuerza un remount COMPLETO de HomeScreen (y de
-      // MetricsHeader, QuickActions, CloudStatusPanel dentro de él) cada
-      // vez que cambia la cuenta autenticada. Sin esto, si React decidiera
-      // reutilizar la misma instancia del componente entre una cuenta y
-      // otra, los `useLiveQuery` podrían quedar mostrando, aunque sea un
-      // instante, el último valor calculado para la bodega anterior en
-      // vez de arrancar limpios junto con el Dexie ya filtrado por
-      // `bodegaId` (ver syncService.js). Se aplica igual en las demás
-      // pantallas de arriba, por la misma razón.
-      key={usuario.uid}
-      usuario={usuario}
-      onCerrarSesion={manejarCerrarSesion}
-      onNuevaVenta={() => setPantalla('ventas')}
-      onVerFiados={() => setPantalla('fiados')}
-      onVerInventario={() => setPantalla('inventario')}
-      onVerCierre={() => setPantalla('cierre')}
-    />
+    <SuscripcionProvider key={usuario.uid} usuario={usuario}>
+      {contenido}
+    </SuscripcionProvider>
   )
 }
 

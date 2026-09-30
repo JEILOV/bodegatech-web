@@ -9,6 +9,7 @@ import {
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import firebaseApp, { dbCloud } from './firebase'
 import { limpiarBaseDatosLocal } from '../db/dexie'
+import { PLAN_FREE } from '../config/planes'
 
 /**
  * Instancia de Firebase Auth, basada en la misma app inicializada
@@ -37,7 +38,8 @@ export async function loginUsuario(email, password) {
 /**
  * Crea una cuenta nueva (correo + contraseña), guarda el nombre del
  * administrador en el perfil de Firebase Auth (displayName) y persiste
- * el nombre de la bodega en Firestore, en `users/{uid}`.
+ * el nombre de la bodega en Firestore, en `users/{uid}` (junto con el plan
+ * de suscripción, que arranca en `free`).
  *
  * Si la escritura en Firestore fallara (por ejemplo, sin conexión), la
  * cuenta de Auth ya quedó creada igual: no se revierte el alta para no
@@ -61,6 +63,12 @@ export async function registrarUsuario({ nombreBodega, nombreAdministrador, emai
       nombreAdministrador: nombreAdministrador.trim(),
       email: email.trim(),
       creadoEn: serverTimestamp(),
+      // Suscripción: toda cuenta nace en el plan gratuito. Las reglas de
+      // Firestore (users/{userId}) rechazan que el cliente cree o cambie
+      // estos campos con otro valor: el Plan Pro solo lo activa el
+      // administrador desde la consola de Firebase.
+      plan: PLAN_FREE,
+      fechaVencimientoPro: null,
     })
   } catch (error) {
     console.error('[authService] No se pudo guardar el perfil de la bodega en Firestore:', error)

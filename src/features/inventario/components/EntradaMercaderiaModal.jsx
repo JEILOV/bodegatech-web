@@ -6,6 +6,7 @@ import {
   actualizarProductoEnNube,
 } from '../../../services/firestoreDataService'
 import { ScannerModal } from '../../ventas/components/ScannerModal'
+import { useSuscripcion } from '../../suscripcion/useSuscripcion'
 
 /**
  * Carga rápida de stock optimizada para escáner: se busca el código
@@ -23,6 +24,7 @@ import { ScannerModal } from '../../ventas/components/ScannerModal'
  * en vez de duplicar esa lógica acá.
  */
 export function EntradaMercaderiaModal({ onCerrar, onProductoNoEncontrado }) {
+  const { verificarLimite } = useSuscripcion()
   const [vista, setVista] = useState('escaneando') // 'escaneando' | 'manual' | 'buscando' | 'encontrado'
   const [codigoManual, setCodigoManual] = useState('')
   const [productoEncontrado, setProductoEncontrado] = useState(null)
@@ -48,6 +50,16 @@ export function EntradaMercaderiaModal({ onCerrar, onProductoNoEncontrado }) {
         esNuevoEnLocal: false,
       })
       setVista('encontrado')
+      return
+    }
+
+    // Desde acá, todo camino CREA un producto nuevo en el catálogo (b: lo
+    // trae de la red; c: registro manual). Si el plan gratuito ya llegó a
+    // su tope se abre PlanesPage y este modal vuelve a la vista manual (no
+    // a la cámara: seguiría leyendo el mismo código y reabriría el aviso).
+    const totalProductos = await db.products.count()
+    if (!verificarLimite('productos', totalProductos)) {
+      setVista('manual')
       return
     }
 

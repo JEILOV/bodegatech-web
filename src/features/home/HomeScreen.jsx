@@ -2,6 +2,9 @@ import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/dexie'
 import { usePerfilBodega } from '../../hooks/usePerfilBodega'
+import { useSuscripcion } from '../suscripcion/useSuscripcion'
+import { InsigniaPro } from '../suscripcion/InsigniaPro'
+import { IconDestello } from '../suscripcion/IconosSuscripcion'
 import { MetricsHeader } from './components/MetricsHeader'
 import { QuickActions } from './components/QuickActions'
 import { CloudStatusPanel } from './components/CloudStatusPanel'
@@ -91,6 +94,10 @@ export function HomeScreen({ usuario, onCerrarSesion, onNuevaVenta, onVerFiados,
   // (cuenta creada antes de que se guardara este perfil).
   const perfilBodega = usePerfilBodega(usuario?.uid)
 
+  // Plan de suscripción: alimenta el acceso a PlanesPage desde el
+  // encabezado y el bloqueo suave de la lista de reposición (función Pro).
+  const { esPro, esFree, vencido, cargandoPlan, abrirPlanes, verificarPro } = useSuscripcion()
+
   // Prioridad para el nombre mostrado en el encabezado:
   // 1) nombreBodega guardado en Firestore al registrarse
   // 2) displayName del usuario en Firebase Auth (nombre del administrador)
@@ -163,6 +170,7 @@ export function HomeScreen({ usuario, onCerrarSesion, onNuevaVenta, onVerFiados,
    */
   function manejarImprimirListaReposicion() {
     if (productosOrdenados.length === 0) return
+    if (!verificarPro('reportes')) return
     const nombreBodega = perfilBodega?.nombreBodega || usuario?.displayName || 'Mi Bodega'
     const html = construirHtmlListaReposicion(productosOrdenados, nombreBodega)
 
@@ -195,6 +203,17 @@ export function HomeScreen({ usuario, onCerrarSesion, onNuevaVenta, onVerFiados,
                 <span className="mt-1 inline-block h-6 w-40 rounded bg-white/20 animate-pulse" />
               ) : (
                 <h1 className="text-white text-xl font-bold leading-tight truncate">{nombreEncabezado}</h1>
+              )}
+              {!cargandoPlan && (
+                <button
+                  onClick={() => abrirPlanes()}
+                  className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1
+                             text-[11px] font-semibold text-white hover:bg-white/25 active:scale-95
+                             transition-all duration-150"
+                >
+                  <IconDestello className="h-3 w-3" />
+                  {esPro ? 'Plan Pro activo' : vencido ? 'Renovar Plan Pro' : 'Mejorar a Pro'}
+                </button>
               )}
             </div>
           </div>
@@ -240,6 +259,7 @@ export function HomeScreen({ usuario, onCerrarSesion, onNuevaVenta, onVerFiados,
               >
                 <IconImprimir className="w-4 h-4" />
                 <span className="hidden xs:inline">Imprimir lista</span>
+                {esFree && <InsigniaPro />}
               </button>
             )}
           </div>

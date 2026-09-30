@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/dexie'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { useBackableState } from '../../hooks/useBackableState'
+import { useSuscripcion } from '../suscripcion/useSuscripcion'
 import { EditarStockModal } from './components/EditarStockModal'
 import { NuevoProductoModal } from './components/NuevoProductoModal'
 import { EntradaMercaderiaModal } from './components/EntradaMercaderiaModal'
@@ -11,6 +12,7 @@ import { IconCamara, IconMas, IconBuscar, IconInventario, IconAlerta } from '../
 const STOCK_CRITICO_UMBRAL = 5
 
 export function InventarioPage({ onVolver }) {
+  const { verificarLimite } = useSuscripcion()
   const [busqueda, setBusqueda] = useState('')
   const [productoParaEditar, setProductoParaEditar] = useState(null)
   const [mostrarNuevoProducto, setMostrarNuevoProducto] = useState(false)
@@ -25,6 +27,14 @@ export function InventarioPage({ onVolver }) {
   useBackableState(mostrarEntradaMercaderia, () => setMostrarEntradaMercaderia(false))
 
   const productos = useLiveQuery(() => db.products.toArray(), [])
+
+  // Bloqueo suave del límite del plan gratuito: se verifica ANTES de abrir
+  // el formulario para que nadie llene un registro que no podrá guardar.
+  // Si ya llegó al tope se abre PlanesPage encima y esta pantalla sigue igual.
+  function abrirNuevoProducto() {
+    if (!verificarLimite('productos', productos?.length ?? 0)) return
+    setMostrarNuevoProducto(true)
+  }
 
   // La Entrada de Mercadería no encontró el código en Dexie ni en Firestore:
   // se cierra ese flujo y se abre el de registro manual, con el código ya listo.
@@ -88,7 +98,7 @@ export function InventarioPage({ onVolver }) {
               <IconCamara className="w-[18px] h-[18px]" /> Entrada de Mercadería
             </button>
             <button
-              onClick={() => setMostrarNuevoProducto(true)}
+              onClick={abrirNuevoProducto}
               className="flex items-center justify-center gap-1.5 bg-white border border-slate-200 text-dark-text
                          font-semibold py-3 rounded-xl active:scale-95 hover:border-primary-200 hover:shadow-sm
                          transition-all duration-150"

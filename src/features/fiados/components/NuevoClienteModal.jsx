@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { crearClienteEnNube } from '../../../services/firestoreDataService'
+import { db } from '../../../db/dexie'
+import { useSuscripcion } from '../../suscripcion/useSuscripcion'
 import { IconCerrar } from '../../home/NavIcons'
 
 export function NuevoClienteModal({ onCerrar, onClienteCreado }) {
+  const { verificarLimite } = useSuscripcion()
   const [nombre, setNombre] = useState('')
   const [telefono, setTelefono] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -15,6 +18,13 @@ export function NuevoClienteModal({ onCerrar, onClienteCreado }) {
 
     setGuardando(true)
     try {
+      // Bloqueo suave del límite de clientes con fiado del plan gratuito.
+      // Se verifica acá (y no en cada botón "Nuevo cliente") porque este
+      // modal se abre desde Fiados y desde el selector de clientes de Ventas.
+      // PlanesPage se abre encima: el nombre y teléfono ya escritos se conservan.
+      const totalClientes = await db.customers.count()
+      if (!verificarLimite('clientes', totalClientes)) return
+
       const nuevoClienteId = `cust-${Date.now()}`
       await crearClienteEnNube({
         id: nuevoClienteId,

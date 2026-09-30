@@ -5,6 +5,8 @@ import { formatCurrency } from '../../utils/formatCurrency'
 import { obtenerInfoMetodoPago } from '../../utils/metodoPago'
 import { formatearCantidadItem } from '../../utils/granel'
 import { useBackableState } from '../../hooks/useBackableState'
+import { useSuscripcion } from '../suscripcion/useSuscripcion'
+import { InsigniaPro } from '../suscripcion/InsigniaPro'
 import { descargarCsvCierreDeCaja } from '../../utils/exportarVentasCsv'
 import { DetalleVentaModal } from './components/DetalleVentaModal'
 import { IconCalculadora, IconDescargar, IconCheckCirculo } from '../home/NavIcons'
@@ -82,6 +84,7 @@ function obtenerRangoISO(fechaInicioStr, fechaFinStr) {
 }
 
 export function CierreCajaPage({ onVolver }) {
+  const { esFree, verificarPro } = useSuscripcion()
   const [fechaInicio, setFechaInicio] = useState(() => formatearInputDate(HOY))
   const [fechaFin, setFechaFin] = useState(() => formatearInputDate(HOY))
   const [cierre, setCierre] = useState(null)
@@ -172,6 +175,9 @@ export function CierreCajaPage({ onVolver }) {
    */
   function exportarCierre() {
     if (!datos || datos.ventas.length === 0) return
+    // Exportar reportes es una función del Plan Pro: si es gratuito se
+    // abre PlanesPage encima y el reporte en pantalla queda intacto.
+    if (!verificarPro('reportes')) return
     descargarCsvCierreDeCaja(datos.ventas, nombrePorClienteId, { fechaInicio, fechaFin })
   }
 
@@ -206,6 +212,7 @@ export function CierreCajaPage({ onVolver }) {
           >
             <IconDescargar className="w-4 h-4" />
             Exportar
+            {esFree && <InsigniaPro />}
           </button>
         </div>
       </header>
