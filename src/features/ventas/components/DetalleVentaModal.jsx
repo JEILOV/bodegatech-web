@@ -1,5 +1,6 @@
 import { formatCurrency } from '../../../utils/formatCurrency'
 import { obtenerInfoMetodoPago } from '../../../utils/metodoPago'
+import { BadgeMetodoPago } from '../../../components/MetodosPago'
 import { formatearCantidadItem } from '../../../utils/granel'
 import { IconCerrar, IconImprimir, IconChat, IconTicket } from '../../home/NavIcons'
 
@@ -140,11 +141,7 @@ export function DetalleVentaModal({ venta, clienteNombre, onCerrar }) {
             <p className="text-xs text-dark-text-muted">
               {fechaTexto} — {horaTexto}
             </p>
-            <span
-              className={`inline-flex items-center gap-1 mt-2 text-xs font-bold px-2.5 py-1 rounded-full ${infoMetodoPago.clases}`}
-            >
-              {infoMetodoPago.icono} {infoMetodoPago.etiqueta}
-            </span>
+            <BadgeMetodoPago metodo={venta.tipoPago} className="mt-2" />
             {venta.tipoPago === 'fiado' && (
               <p className="text-sm text-dark-text mt-2">
                 Cliente: <span className="font-semibold">{clienteNombre}</span>

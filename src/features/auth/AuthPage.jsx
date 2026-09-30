@@ -22,6 +22,36 @@ function mensajeDeError(error) {
   return MENSAJES_ERROR_FIREBASE[error?.code] || 'Ocurrió un error inesperado. Intenta de nuevo.'
 }
 
+/* Clases compartidas: sobrias, sin colores de marca saturados. */
+const CLASE_LABEL = 'block text-sm font-medium text-slate-700'
+const CLASE_INPUT =
+  'input-field rounded-lg border-slate-300 placeholder:text-slate-400 ' +
+  'focus:border-slate-900 focus:ring-slate-900/10'
+const CLASE_BOTON_PRINCIPAL =
+  'w-full rounded-lg bg-slate-900 text-white text-sm font-semibold py-3 shadow-sm ' +
+  'hover:bg-slate-800 active:bg-slate-950 transition-colors duration-150 ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 ' +
+  'disabled:opacity-50 disabled:pointer-events-none'
+
+/**
+ * Isotipo vectorial de BodegaTech: cuadrado grafito con una "B"
+ * geométrica de trazo continuo (dos paneles apilados, como un estante).
+ */
+function IsotipoBodegaTech({ className = 'w-10 h-10' }) {
+  return (
+    <svg viewBox="0 0 40 40" fill="none" className={className} role="img" aria-label="BodegaTech">
+      <rect width="40" height="40" rx="10" fill="#0F172A" />
+      <path
+        d="M14 11v20M14 11h5a5 5 0 010 10h-5M14 21h6a5 5 0 010 10h-6"
+        stroke="#FFFFFF"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 /** Ícono de ojo (mostrar/ocultar contraseña), sin dependencias externas. */
 function IconoOjo({ visible }) {
   if (visible) {
@@ -56,14 +86,14 @@ function CampoPassword({ label, value, onChange, autoComplete, placeholder = '�
 
   return (
     <div>
-      <label className="text-xs font-medium text-dark-text-muted">{label}</label>
-      <div className="relative mt-1">
+      <label className={CLASE_LABEL}>{label}</label>
+      <div className="relative mt-1.5">
         <input
           type={visible ? 'text' : 'password'}
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          className="input-field pr-12"
+          className={`${CLASE_INPUT} pr-12`}
           autoComplete={autoComplete}
         />
         <button
@@ -85,7 +115,7 @@ function CampoPassword({ label, value, onChange, autoComplete, placeholder = '�
 function AlertaError({ mensaje }) {
   if (!mensaje) return null
   return (
-    <div className="flex items-start gap-2 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl px-3 py-2.5">
+    <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2.5">
       <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 mt-0.5 shrink-0">
         <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
         <path d="M12 8v5M12 16h.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -126,13 +156,13 @@ function FormularioLogin({ onExito }) {
   return (
     <form onSubmit={manejarSubmit} className="space-y-4">
       <div>
-        <label className="text-xs font-medium text-dark-text-muted">Correo electrónico</label>
+        <label className={CLASE_LABEL}>Correo electrónico</label>
         <input
           type="email"
           value={email}
           onChange={(evento) => setEmail(evento.target.value)}
           placeholder="tucorreo@ejemplo.com"
-          className="input-field mt-1"
+          className={`${CLASE_INPUT} mt-1.5`}
           autoComplete="email"
           autoFocus
         />
@@ -150,9 +180,7 @@ function FormularioLogin({ onExito }) {
       <button
         type="submit"
         disabled={cargando}
-        className="w-full rounded-xl bg-gradient-to-r from-primary-600 to-purple-600 text-white
-                   font-semibold py-3.5 shadow-lg shadow-primary-600/25 active:scale-[0.98]
-                   transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none"
+        className={CLASE_BOTON_PRINCIPAL}
       >
         {cargando ? 'Ingresando...' : 'Iniciar sesión'}
       </button>
@@ -210,38 +238,38 @@ function FormularioRegistro({ onExito }) {
   return (
     <form onSubmit={manejarSubmit} className="space-y-4">
       <div>
-        <label className="text-xs font-medium text-dark-text-muted">Nombre de la bodega</label>
+        <label className={CLASE_LABEL}>Nombre de la bodega</label>
         <input
           type="text"
           value={nombreBodega}
           onChange={(evento) => setNombreBodega(evento.target.value)}
           placeholder="Bodega Don Pedro"
-          className="input-field mt-1"
+          className={`${CLASE_INPUT} mt-1.5`}
           autoComplete="organization"
           autoFocus
         />
       </div>
 
       <div>
-        <label className="text-xs font-medium text-dark-text-muted">Nombre del administrador</label>
+        <label className={CLASE_LABEL}>Nombre del administrador</label>
         <input
           type="text"
           value={nombreAdministrador}
           onChange={(evento) => setNombreAdministrador(evento.target.value)}
           placeholder="Pedro Ramírez"
-          className="input-field mt-1"
+          className={`${CLASE_INPUT} mt-1.5`}
           autoComplete="name"
         />
       </div>
 
       <div>
-        <label className="text-xs font-medium text-dark-text-muted">Correo electrónico</label>
+        <label className={CLASE_LABEL}>Correo electrónico</label>
         <input
           type="email"
           value={email}
           onChange={(evento) => setEmail(evento.target.value)}
           placeholder="tucorreo@ejemplo.com"
-          className="input-field mt-1"
+          className={`${CLASE_INPUT} mt-1.5`}
           autoComplete="email"
         />
       </div>
@@ -266,9 +294,7 @@ function FormularioRegistro({ onExito }) {
       <button
         type="submit"
         disabled={cargando}
-        className="w-full rounded-xl bg-gradient-to-r from-primary-600 to-purple-600 text-white
-                   font-semibold py-3.5 shadow-lg shadow-primary-600/25 active:scale-[0.98]
-                   transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none"
+        className={CLASE_BOTON_PRINCIPAL}
       >
         {cargando ? 'Creando cuenta...' : 'Crear cuenta'}
       </button>
@@ -276,10 +302,15 @@ function FormularioRegistro({ onExito }) {
   )
 }
 
+const TABS = [
+  { id: 'login', etiqueta: 'Iniciar sesión' },
+  { id: 'registro', etiqueta: 'Crear cuenta' },
+]
+
 /**
- * Pantalla de autenticación premium: fondo con gradiente azul/morado,
- * tarjeta flotante centrada y selector por pestañas entre
- * "Iniciar Sesión" y "Crear Cuenta". Reemplaza a LoginScreen.jsx.
+ * Pantalla de autenticación: fondo neutro, tarjeta blanca con borde sutil
+ * y selector por pestañas entre "Iniciar sesión" y "Crear cuenta".
+ * Reemplaza a LoginScreen.jsx.
  *
  * App.jsx la muestra en solitario mientras no haya sesión activa; en
  * cuanto loginUsuario()/registrarUsuario() resuelven, observarEstadoAuth()
@@ -289,61 +320,52 @@ export function AuthPage() {
   const [tab, setTab] = useState('login')
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center px-4 py-10 relative overflow-hidden bg-slate-950">
-      {/* Fondo con gradiente azul/morado + resplandores suaves */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-700 via-primary-600 to-purple-700" />
-      <div className="absolute -top-24 -left-24 w-72 h-72 bg-purple-400/30 rounded-full blur-3xl" />
-      <div className="absolute -bottom-24 -right-16 w-80 h-80 bg-primary-300/30 rounded-full blur-3xl" />
-
-      <div className="relative w-full max-w-md">
-        {/* Logo + nombre de marca */}
-        <div className="text-center mb-6">
-          <div
-            className="w-16 h-16 rounded-2xl bg-white/95 flex items-center justify-center
-                       shadow-xl shadow-black/20 mx-auto mb-4"
-          >
-            <span className="text-2xl font-extrabold bg-gradient-to-br from-primary-600 to-purple-600
-                              bg-clip-text text-transparent">
-              B
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">BodegaTech</h1>
-          <p className="text-sm text-white/70 mt-1">Punto de venta, inventario y fiados para tu bodega</p>
+    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 px-4 py-10">
+      <div className="w-full max-w-md">
+        {/* Isotipo + nombre de marca */}
+        <div className="text-center mb-8">
+          <IsotipoBodegaTech className="w-11 h-11 mx-auto mb-4" />
+          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">BodegaTech</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Punto de venta, inventario y fiados para tu bodega
+          </p>
         </div>
 
-        {/* Tarjeta flotante */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-black/30 border border-white/40 p-6 sm:p-8">
-          {/* Selector por pestañas */}
-          <div className="grid grid-cols-2 gap-1 bg-slate-100 rounded-xl p-1 mb-6">
-            <button
-              type="button"
-              onClick={() => setTab('login')}
-              className={`py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 ${
-                tab === 'login'
-                  ? 'bg-white text-dark-text shadow-sm'
-                  : 'text-dark-text-muted hover:text-dark-text'
-              }`}
-            >
-              Iniciar Sesión
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('registro')}
-              className={`py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 ${
-                tab === 'registro'
-                  ? 'bg-white text-dark-text shadow-sm'
-                  : 'text-dark-text-muted hover:text-dark-text'
-              }`}
-            >
-              Crear Cuenta
-            </button>
+        {/* Tarjeta */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-md shadow-slate-900/5 p-6 sm:p-8">
+          {/* Pestañas con subrayado */}
+          <div role="tablist" className="grid grid-cols-2 border-b border-slate-200 mb-6">
+            {TABS.map(({ id, etiqueta }) => {
+              const activa = tab === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  id={`tab-${id}`}
+                  aria-selected={activa}
+                  aria-controls={`panel-${id}`}
+                  onClick={() => setTab(id)}
+                  className={`-mb-px pb-3 text-sm font-medium border-b-2 transition-colors duration-150
+                              focus-visible:outline-none focus-visible:text-slate-900 ${
+                    activa
+                      ? 'border-slate-900 text-slate-900'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {etiqueta}
+                </button>
+              )
+            })}
           </div>
 
-          {tab === 'login' ? <FormularioLogin /> : <FormularioRegistro />}
+          <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+            {tab === 'login' ? <FormularioLogin /> : <FormularioRegistro />}
+          </div>
         </div>
 
-        <p className="text-center text-xs text-white/60 mt-6">
-          BodegaTech POS · Gestiona tu bodega desde cualquier dispositivo
+        <p className="text-center text-xs text-slate-400 mt-6">
+          Gestiona tu bodega desde cualquier dispositivo.
         </p>
       </div>
     </div>

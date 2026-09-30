@@ -4,6 +4,7 @@ import { db } from '../../db/dexie'
 import { registrarVentaEnNube } from '../../services/firestoreDataService'
 import { formatCurrency } from '../../utils/formatCurrency'
 import { obtenerInfoMetodoPago } from '../../utils/metodoPago'
+import { IconoMetodoPago, LogoYape, LogoPlin } from '../../components/MetodosPago'
 import { useBackableState } from '../../hooks/useBackableState'
 import { ScannerModal } from './components/ScannerModal'
 import { CartItemList } from './components/CartItemList'
@@ -448,41 +449,42 @@ export function VentasPage({ onVentaFinalizada }) {
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => setModoPago('efectivo')}
-                className={`py-3 rounded-xl font-semibold border text-sm ${
-                  modoPago === 'efectivo'
-                    ? 'bg-success text-white border-success'
-                    : 'bg-white text-dark-text border-slate-200'
-                }`}
-              >
-                💵 Efectivo
-              </button>
-              <button
-                onClick={() => setModoPago('yape')}
-                className={`py-3 rounded-xl font-semibold border text-sm ${
-                  modoPago === 'yape'
-                    ? 'bg-purple-600 text-white border-purple-600'
-                    : 'bg-white text-dark-text border-slate-200'
-                }`}
-              >
-                {infoYape.icono} Yape / Plin
-              </button>
-              <button
-                onClick={() => setModoPago('fiado')}
-                className={`py-3 rounded-xl font-semibold border text-sm ${
-                  modoPago === 'fiado'
-                    ? 'bg-warning text-white border-warning'
-                    : 'bg-white text-dark-text border-slate-200'
-                }`}
-              >
-                📒 Fiado
-              </button>
+              {[
+                { valor: 'efectivo', etiqueta: 'Efectivo', icono: <IconoMetodoPago metodo="efectivo" className="w-5 h-5" /> },
+                {
+                  valor: 'yape',
+                  etiqueta: 'Yape / Plin',
+                  icono: (
+                    <span className="flex gap-1">
+                      <LogoYape className="w-5 h-5" />
+                      <LogoPlin className="w-5 h-5" />
+                    </span>
+                  ),
+                },
+                { valor: 'fiado', etiqueta: 'Fiado', icono: <IconoMetodoPago metodo="fiado" className="w-5 h-5" /> },
+              ].map(({ valor, etiqueta, icono }) => (
+                <button
+                  key={valor}
+                  onClick={() => setModoPago(valor)}
+                  aria-pressed={modoPago === valor}
+                  className={`flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-xl border text-xs font-semibold ${
+                    modoPago === valor
+                      ? 'border-slate-900 bg-slate-50 text-slate-900 ring-1 ring-slate-900'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  {icono}
+                  {etiqueta}
+                </button>
+              ))}
             </div>
 
             {modoPago === 'yape' && (
               <div className={`flex items-center gap-2 rounded-lg px-3 py-3 text-sm font-medium ${infoYape.clases}`}>
-                <span className="text-lg leading-none">{infoYape.icono}</span>
+                <span className="flex shrink-0 gap-1">
+                  <LogoYape className="w-5 h-5" />
+                  <LogoPlin className="w-5 h-5" />
+                </span>
                 Confirma cuando veas la notificación de pago en tu app de Yape o Plin.
               </div>
             )}

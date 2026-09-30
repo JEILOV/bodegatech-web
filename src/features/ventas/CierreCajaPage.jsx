@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/dexie'
 import { formatCurrency } from '../../utils/formatCurrency'
-import { obtenerInfoMetodoPago } from '../../utils/metodoPago'
+import { BadgeMetodoPago, LogoYape, LogoPlin } from '../../components/MetodosPago'
 import { formatearCantidadItem } from '../../utils/granel'
 import { useBackableState } from '../../hooks/useBackableState'
 import { useSuscripcion } from '../suscripcion/useSuscripcion'
@@ -292,9 +292,15 @@ export function CierreCajaPage({ onVolver }) {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between bg-purple-50 rounded-xl px-3.5 py-3">
-                <span className="text-sm font-medium text-dark-text">Total Yape / Plin</span>
-                <span className="text-lg font-bold text-purple-700">
+              <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-3">
+                <span className="flex items-center gap-2 text-sm font-medium text-dark-text">
+                  <span className="flex -space-x-1">
+                    <LogoYape className="w-5 h-5 ring-2 ring-slate-50 rounded-md" />
+                    <LogoPlin className="w-5 h-5 ring-2 ring-slate-50 rounded-md" />
+                  </span>
+                  Total Yape / Plin
+                </span>
+                <span className="text-lg font-bold text-slate-900">
                   {formatCurrency(datos.totalYape)}
                 </span>
               </div>
@@ -359,7 +365,7 @@ export function CierreCajaPage({ onVolver }) {
 
                 <p className="text-sm text-dark-text-muted">
                   Adicionalmente, hoy se cobró{' '}
-                  <span className="font-bold text-purple-700">
+                  <span className="font-bold text-slate-900">
                     {formatCurrency(cierre.totalYape)}
                   </span>{' '}
                   por Yape/Plin (no es efectivo, no está en el cajón) y se fiaron{' '}
@@ -400,7 +406,6 @@ export function CierreCajaPage({ onVolver }) {
             // espaciado, sin perder legibilidad ni resolución.
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[32rem] overflow-y-auto p-0.5 -m-0.5">
               {datos.ventas.map((venta) => {
-                const infoMetodoPago = obtenerInfoMetodoPago(venta.tipoPago)
                 const nombreCliente =
                   venta.tipoPago === 'fiado'
                     ? nombrePorClienteId[venta.clienteId] || 'Cliente eliminado'
@@ -419,11 +424,7 @@ export function CierreCajaPage({ onVolver }) {
                           <p className="text-sm font-semibold text-dark-text truncate">
                             {formatearFechaHora(venta.fecha)}
                           </p>
-                          <span
-                            className={`inline-flex items-center gap-1 mt-1 text-xs font-bold px-2 py-0.5 rounded-full ${infoMetodoPago.clases}`}
-                          >
-                            {infoMetodoPago.icono} {infoMetodoPago.etiqueta}
-                          </span>
+                          <BadgeMetodoPago metodo={venta.tipoPago} className="mt-1" />
                         </div>
                         <span className="text-base font-bold text-dark-text whitespace-nowrap flex-shrink-0">
                           {formatCurrency(venta.total)}

@@ -47,36 +47,32 @@ export function MetricsHeader() {
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-4">
+      <div className="rounded-xl bg-white border border-slate-200 shadow-sm p-4">
         <div className="flex items-center gap-2 mb-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-success-50 text-success-600">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
             <IconTendencia />
           </span>
-          <p className="text-xs font-semibold text-dark-text-muted uppercase tracking-wide">
-            Ventas de hoy
-          </p>
+          <p className="text-xs font-medium text-slate-500">Ventas de hoy</p>
         </div>
-        <p className="text-2xl font-bold text-success">
+        <p className="text-2xl font-semibold text-slate-900 tabular-nums">
           {cargandoVentas ? (
-            <span className="inline-block h-6 w-20 rounded bg-success-50 animate-pulse align-middle" />
+            <span className="inline-block h-6 w-20 rounded bg-slate-100 animate-pulse align-middle" />
           ) : (
             formatCurrency(ventasHoy)
           )}
         </p>
       </div>
 
-      <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-4">
+      <div className="rounded-xl bg-white border border-slate-200 shadow-sm p-4">
         <div className="flex items-center gap-2 mb-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning-50 text-warning-600">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
             <IconPorCobrar />
           </span>
-          <p className="text-xs font-semibold text-dark-text-muted uppercase tracking-wide">
-            Por cobrar
-          </p>
+          <p className="text-xs font-medium text-slate-500">Por cobrar</p>
         </div>
-        <p className="text-2xl font-bold text-warning">
+        <p className="text-2xl font-semibold text-slate-900 tabular-nums">
           {cargandoFiados ? (
-            <span className="inline-block h-6 w-20 rounded bg-warning-50 animate-pulse align-middle" />
+            <span className="inline-block h-6 w-20 rounded bg-slate-100 animate-pulse align-middle" />
           ) : (
             formatCurrency(totalFiados)
           )}
