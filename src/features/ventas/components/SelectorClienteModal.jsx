@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { NuevoClienteModal } from '../../fiados/components/NuevoClienteModal'
+import { IconCerrar, IconMas, IconCheckCirculo } from '../../home/NavIcons'
 
 /**
  * Modal para elegir el cliente de una venta al fiado, sin perder el
@@ -37,9 +38,11 @@ export function SelectorClienteModal({ clientes, clienteSeleccionadoId, onSelecc
       <div className="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center px-4">
         <div className="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 max-h-[85vh] flex flex-col">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-dark-text text-lg">Selecciona un cliente</h3>
-            <button onClick={onCerrar} className="text-dark-text-muted text-xl font-bold px-2">
-              ✕
+            <h3 className="font-semibold text-slate-900 text-lg tracking-tight">Selecciona un cliente</h3>
+            <button onClick={onCerrar} aria-label="Cerrar" className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500
+                       hover:bg-slate-100 hover:text-slate-900 transition-colors duration-150
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900">
+              <IconCerrar className="w-4 h-4" />
             </button>
           </div>
 
@@ -57,16 +60,17 @@ export function SelectorClienteModal({ clientes, clienteSeleccionadoId, onSelecc
           <button
             onClick={() => setMostrarNuevoCliente(true)}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl
-                       border-2 border-dashed border-primary text-primary font-semibold
-                       active:scale-95 transition-transform duration-100 flex-shrink-0"
+                       border border-dashed border-slate-300 bg-white text-slate-700 font-semibold
+                       hover:bg-slate-50 hover:border-slate-400 active:bg-slate-100
+                       transition-colors duration-150 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
           >
-            <span className="text-lg leading-none">+</span>
+            <IconMas className="w-4 h-4" />
             Crear nuevo cliente
           </button>
 
           <ul className="divide-y divide-slate-100 overflow-y-auto -mx-5 px-5">
             {clientesFiltrados.length === 0 && (
-              <li className="text-sm text-dark-text-muted text-center py-6">
+              <li className="text-sm text-slate-500 text-center py-6">
                 No se encontraron clientes.
               </li>
             )}
@@ -78,16 +82,16 @@ export function SelectorClienteModal({ clientes, clienteSeleccionadoId, onSelecc
                     onCerrar()
                   }}
                   className={`w-full text-left px-2 py-3 flex items-center justify-between gap-2 rounded-lg
-                    ${cliente.id === clienteSeleccionadoId ? 'bg-primary/10' : 'hover:bg-slate-50'}`}
+                    ${cliente.id === clienteSeleccionadoId ? 'bg-slate-100' : 'hover:bg-slate-50'}`}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-dark-text truncate">{cliente.nombre}</p>
+                    <p className="text-sm font-semibold text-slate-900 truncate">{cliente.nombre}</p>
                     {cliente.telefono && (
-                      <p className="text-xs text-dark-text-muted">{cliente.telefono}</p>
+                      <p className="text-xs text-slate-500">{cliente.telefono}</p>
                     )}
                   </div>
                   {cliente.id === clienteSeleccionadoId && (
-                    <span className="text-primary font-bold flex-shrink-0">✓</span>
+                    <IconCheckCirculo className="w-5 h-5 text-slate-900 flex-shrink-0" />
                   )}
                 </button>
               </li>

@@ -117,17 +117,18 @@ export function DetalleVentaModal({ venta, clienteNombre, onCerrar }) {
         id="ticket-imprimible"
         className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] flex flex-col shadow-2xl overflow-hidden print:max-h-none print:rounded-none print:shadow-none"
       >
-        {/* Encabezado con gradiente, en sintonía con AuthPage/HomeScreen — oculto al imprimir para que el ticket luzca como un recibo neutro */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 to-purple-600 px-5 py-4 flex items-center justify-between flex-shrink-0 print:hidden">
-          <div className="absolute -top-8 -right-8 w-28 h-28 bg-white/10 rounded-full blur-2xl" />
-          <h3 className="relative flex items-center gap-2 font-bold text-white text-lg">
-            <IconTicket className="w-5 h-5" />
+        {/* Encabezado sobrio (fondo blanco) — oculto al imprimir para que el ticket luzca como un recibo neutro */}
+        <div className="bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between flex-shrink-0 print:hidden">
+          <h3 className="flex items-center gap-2 font-semibold text-slate-900 text-lg tracking-tight">
+            <IconTicket className="w-5 h-5 text-slate-700" />
             Comprobante de venta
           </h3>
           <button
             onClick={onCerrar}
-            className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white
-                       hover:bg-white/25 active:scale-90 transition-all duration-150"
+            aria-label="Cerrar"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500
+                       hover:bg-slate-100 hover:text-slate-900 transition-colors duration-150
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
           >
             <IconCerrar className="w-4 h-4" />
           </button>
@@ -192,7 +193,7 @@ export function DetalleVentaModal({ venta, clienteNombre, onCerrar }) {
             </div>
             <div className="flex justify-between items-center pt-1.5 border-t border-slate-100">
               <span className="font-bold text-dark-text">TOTAL</span>
-              <span className="text-2xl font-bold text-primary-600">{formatCurrency(venta.total)}</span>
+              <span className="text-2xl font-bold text-slate-900">{formatCurrency(venta.total)}</span>
             </div>
           </div>
         </div>
@@ -203,15 +204,15 @@ export function DetalleVentaModal({ venta, clienteNombre, onCerrar }) {
             <button
               onClick={manejarImprimir}
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-slate-200
-                         text-dark-text font-semibold text-sm active:scale-95 hover:border-primary-200 hover:shadow-sm
-                         transition-all duration-150"
+                         text-slate-900 font-semibold text-sm hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100
+                         transition-colors duration-150"
             >
               <IconImprimir className="w-4 h-4" /> Imprimir
             </button>
             <button
               onClick={manejarCompartirWhatsApp}
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#25D366] text-white
-                         font-semibold text-sm active:scale-95 transition-transform duration-100 shadow-sm"
+                         font-semibold text-sm shadow-sm hover:bg-[#1FB855] active:bg-[#1AA34D] transition-colors duration-150"
             >
               <IconChat className="w-4 h-4" /> Compartir
             </button>
@@ -219,8 +220,8 @@ export function DetalleVentaModal({ venta, clienteNombre, onCerrar }) {
 
           <button
             onClick={onCerrar}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-primary-600 to-purple-600 text-white
-                       font-semibold shadow-md shadow-primary-600/20 active:scale-95 transition-all duration-150"
+            className="w-full py-3 rounded-xl bg-slate-900 text-white font-semibold shadow-sm
+                       hover:bg-slate-800 active:bg-slate-950 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
           >
             Cerrar
           </button>

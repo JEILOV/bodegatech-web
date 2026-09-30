@@ -229,14 +229,15 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center px-4">
       <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-        {/* Encabezado con gradiente, en sintonía con AuthPage/HomeScreen */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 to-purple-600 px-5 py-4 flex items-center justify-between flex-shrink-0">
-          <div className="absolute -top-8 -right-8 w-28 h-28 bg-white/10 rounded-full blur-2xl" />
-          <h3 className="relative font-bold text-white text-lg">Registrar producto</h3>
+        {/* Encabezado sobrio: fondo blanco y borde inferior sutil */}
+        <div className="bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between flex-shrink-0">
+          <h3 className="font-semibold text-slate-900 text-lg tracking-tight">Registrar producto</h3>
           <button
             onClick={onCerrar}
-            className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white
-                       hover:bg-white/25 active:scale-90 transition-all duration-150"
+            aria-label="Cerrar"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500
+                       hover:bg-slate-100 hover:text-slate-900 transition-colors duration-150
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
           >
             <IconCerrar className="w-4 h-4" />
           </button>
@@ -263,8 +264,8 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
                 onClick={manejarConsultaManual}
                 disabled={consultando}
                 aria-label="Buscar código"
-                className="flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-dark-text
-                           font-semibold px-3.5 rounded-xl transition-colors duration-150"
+                className="flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 text-slate-700
+                           font-semibold px-3.5 rounded-xl transition-colors duration-150 disabled:opacity-50"
               >
                 <IconBuscar className="w-4 h-4" />
               </button>
@@ -277,9 +278,10 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
 
           <button
             onClick={() => setMostrarScanner(true)}
-            className="w-full bg-gradient-to-r from-primary-600 to-purple-600 text-white font-semibold py-3
-                       rounded-xl shadow-md shadow-primary-600/20 active:scale-95 transition-all duration-150
-                       flex items-center justify-center gap-2"
+            className="w-full bg-slate-900 text-white font-semibold py-3 rounded-xl shadow-sm
+                       hover:bg-slate-800 active:bg-slate-950 transition-colors duration-150
+                       flex items-center justify-center gap-2
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
           >
             <IconCamara className="w-4 h-4" /> Escanear / Consultar
           </button>
@@ -332,8 +334,8 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
                 onClick={() => setTipoVenta('unidad')}
                 className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold border transition-colors duration-150 ${
                   tipoVenta === 'unidad'
-                    ? 'bg-primary-600 text-white border-primary-600'
-                    : 'bg-white text-dark-text border-slate-200 hover:border-primary-200'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
                 <IconCaja className="w-4 h-4" /> Por Unidad
@@ -343,8 +345,8 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
                 onClick={() => setTipoVenta('granel')}
                 className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold border transition-colors duration-150 ${
                   tipoVenta === 'granel'
-                    ? 'bg-primary-600 text-white border-primary-600'
-                    : 'bg-white text-dark-text border-slate-200 hover:border-primary-200'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
                 <IconBalanza className="w-4 h-4" /> A Granel / Peso
@@ -363,8 +365,8 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
                     onClick={() => setUnidadMedida(unidad)}
                     className={`py-2 rounded-xl text-sm font-semibold border uppercase transition-colors duration-150 ${
                       unidadMedida === unidad
-                        ? 'bg-primary-600 text-white border-primary-600'
-                        : 'bg-white text-dark-text border-slate-200 hover:border-primary-200'
+                        ? 'bg-slate-900 text-white border-slate-900'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                     }`}
                   >
                     {unidad}
@@ -408,9 +410,10 @@ export function NuevoProductoModal({ onCerrar, onProductoCreado, codigoInicial }
           <button
             onClick={manejarGuardar}
             disabled={guardando || yaExisteEnBodega}
-            className="w-full bg-success-500 hover:bg-success-600 text-white font-semibold py-3.5
-                       rounded-xl shadow-md shadow-success-500/20 active:scale-95 transition-all duration-150
-                       disabled:opacity-50 disabled:pointer-events-none"
+            className="w-full bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-semibold py-3.5
+                       rounded-xl shadow-sm transition-colors duration-150
+                       disabled:opacity-50 disabled:pointer-events-none
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
           >
             {guardando ? 'Guardando...' : yaExisteEnBodega ? 'Ya está en tu inventario' : 'Guardar producto'}
           </button>

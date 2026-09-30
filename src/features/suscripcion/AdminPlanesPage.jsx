@@ -45,7 +45,7 @@ function describirEstado(estado) {
       detalle: `Venció el ${formatearFechaLarga(estado.fechaVencimiento)}`,
     }
   }
-  return { insignia: 'Gratuito', clases: 'bg-slate-100 text-dark-text-light', detalle: 'Plan gratuito' }
+  return { insignia: 'Gratuito', clases: 'bg-slate-100 text-slate-700', detalle: 'Plan gratuito' }
 }
 
 /**
@@ -200,25 +200,25 @@ export function AdminPlanesPage({ onVolver }) {
   }
 
   const encabezado = (
-    <header className="relative overflow-hidden bg-gradient-to-br from-primary-600 to-purple-600 px-5 pt-8 pb-7 rounded-b-3xl shadow-lg shadow-primary-600/20">
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-      <div className="relative flex items-center gap-3">
+    <header className="bg-white border-b border-slate-200 px-5 pt-6 pb-5">
+      <div className="flex items-center gap-3">
         <button
           onClick={onVolver}
           aria-label="Volver"
-          className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white
-                     active:scale-90 transition-transform duration-100 hover:bg-white/25"
+          className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white
+                     text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors duration-150
+                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
         >
           <IconFlechaIzquierda />
         </button>
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
             <IconEscudo className="w-5 h-5" />
           </span>
           <div className="min-w-0">
-            <h1 className="text-white font-bold text-lg truncate">Administrar planes</h1>
+            <h1 className="text-slate-900 font-semibold text-lg tracking-tight truncate">Administrar planes</h1>
             {esAdmin && bodegas !== undefined && (
-              <p className="text-white/70 text-xs">
+              <p className="text-slate-500 text-xs">
                 {conteos.pro} con Pro · {conteos.todos} bodegas
               </p>
             )}
@@ -233,7 +233,7 @@ export function AdminPlanesPage({ onVolver }) {
     return (
       <div className="min-h-screen bg-slate-50 pb-8">
         {encabezado}
-        <p className="text-sm text-dark-text-muted text-center py-10">Verificando permisos...</p>
+        <p className="text-sm text-slate-500 text-center py-10">Verificando permisos...</p>
       </div>
     )
   }
@@ -242,13 +242,18 @@ export function AdminPlanesPage({ onVolver }) {
     return (
       <div className="min-h-screen bg-slate-50 pb-8">
         {encabezado}
-        <main className="px-4 -mt-4">
-          <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-6 text-center space-y-3">
-            <p className="font-bold text-dark-text">Acceso restringido</p>
-            <p className="text-sm text-dark-text-muted">
+        <main className="px-4 pt-5">
+          <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 text-center space-y-3">
+            <p className="font-semibold text-slate-900">Acceso restringido</p>
+            <p className="text-sm text-slate-500">
               Esta sección es solo para administradores de BodegaTech.
             </p>
-            <button onClick={onVolver} className="btn-primary">
+            <button
+              onClick={onVolver}
+              className="rounded-xl bg-slate-900 px-6 py-3 font-semibold text-white shadow-sm
+                         hover:bg-slate-800 active:bg-slate-950 transition-colors duration-150
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+            >
               Volver al inicio
             </button>
           </div>
@@ -261,8 +266,8 @@ export function AdminPlanesPage({ onVolver }) {
     <div className="min-h-screen bg-slate-50 pb-10">
       {encabezado}
 
-      <main className="px-4 -mt-4 space-y-4">
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-4 space-y-3">
+      <main className="px-4 pt-5 space-y-4">
+        <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-4 space-y-3">
           <div className="relative">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
               <IconBuscar className="w-[18px] h-[18px]" />
@@ -288,17 +293,17 @@ export function AdminPlanesPage({ onVolver }) {
             )}
           </div>
 
-          <div className="grid grid-cols-4 gap-1 bg-slate-100 rounded-xl p-1" role="tablist" aria-label="Filtrar por plan">
+          <div className="grid grid-cols-4 border-b border-slate-200" role="tablist" aria-label="Filtrar por plan">
             {FILTROS.map((opcion) => (
               <button
                 key={opcion.id}
                 role="tab"
                 aria-selected={filtro === opcion.id}
                 onClick={() => setFiltro(opcion.id)}
-                className={`py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
+                className={`-mb-px py-2.5 text-xs font-semibold border-b-2 transition-colors duration-150 ${
                   filtro === opcion.id
-                    ? 'bg-white text-primary-700 shadow-sm'
-                    : 'text-dark-text-muted hover:text-dark-text'
+                    ? 'border-slate-900 text-slate-900'
+                    : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
                 }`}
               >
                 {opcion.etiqueta}
@@ -325,12 +330,12 @@ export function AdminPlanesPage({ onVolver }) {
         )}
 
         {bodegas === undefined && (
-          <p className="text-sm text-dark-text-muted text-center py-6">Cargando bodegas...</p>
+          <p className="text-sm text-slate-500 text-center py-6">Cargando bodegas...</p>
         )}
 
         {bodegas !== undefined && !errorCarga && filasVisibles.length === 0 && (
-          <div className="rounded-2xl bg-white border border-slate-100 shadow-sm text-center py-6 px-4">
-            <p className="text-sm text-dark-text-muted">
+          <div className="rounded-2xl bg-white border border-slate-200 shadow-sm text-center py-6 px-4">
+            <p className="text-sm text-slate-500">
               {busqueda
                 ? 'Ninguna bodega coincide con esa búsqueda.'
                 : 'No hay bodegas en esta categoría.'}
@@ -349,28 +354,28 @@ export function AdminPlanesPage({ onVolver }) {
               <li key={fila.id} className="rounded-2xl bg-white border border-slate-200 shadow-sm p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0">
-                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
+                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
                       <IconTienda className="w-5 h-5" />
                     </span>
                     <div className="min-w-0">
-                      <p className="font-semibold text-dark-text truncate">
+                      <p className="font-semibold text-slate-900 truncate">
                         {fila.nombreBodega || 'Bodega sin nombre'}
                       </p>
-                      <p className="text-xs text-dark-text-muted truncate">{fila.email || 'Sin correo registrado'}</p>
+                      <p className="text-xs text-slate-500 truncate">{fila.email || 'Sin correo registrado'}</p>
                     </div>
                   </div>
                   <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${clases}`}>{insignia}</span>
                 </div>
 
-                <p className="mt-2.5 text-xs text-dark-text-muted">{detalle}</p>
+                <p className="mt-2.5 text-xs text-slate-500">{detalle}</p>
 
                 <div className="mt-3 flex items-center gap-2">
                   <button
                     onClick={() => activarUnMes(fila)}
                     disabled={ocupada}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-primary-600 to-purple-600 py-2.5 text-sm
-                               font-semibold text-white shadow-sm active:scale-95 transition-all duration-150
-                               disabled:opacity-50 disabled:pointer-events-none"
+                    className="flex-1 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white shadow-sm
+                               hover:bg-slate-800 active:bg-slate-950 transition-colors duration-150
+                               disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
                   >
                     {ocupada ? 'Guardando...' : etiquetaActivar}
                   </button>
@@ -379,8 +384,8 @@ export function AdminPlanesPage({ onVolver }) {
                       onClick={() => desactivarPro(fila)}
                       disabled={ocupada}
                       className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold
-                                 text-dark-text-light hover:border-warning-100 hover:text-warning-700 active:scale-95
-                                 transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none"
+                                 text-slate-700 hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100
+                                 transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none"
                     >
                       Desactivar Pro
                     </button>

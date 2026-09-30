@@ -1,12 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../../db/dexie'
 import { formatCurrency } from '../../../utils/formatCurrency'
-
-const ICONOS_MEDIO_PAGO = {
-  efectivo: '💵',
-  yape: '📱',
-  plin: '📲',
-}
+import { BadgeMetodoPago } from '../../../components/MetodosPago'
 
 function formatearFecha(fechaIso) {
   return new Date(fechaIso).toLocaleDateString('es-PE', {
@@ -48,7 +43,7 @@ export function HistorialAbonos({ clienteId, limite = 5 }) {
       {abonos.map((abono) => (
         <li key={abono.id} className="flex items-center justify-between py-2 text-sm">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-base">{ICONOS_MEDIO_PAGO[abono.tipoPago] || '💰'}</span>
+            <BadgeMetodoPago metodo={abono.tipoPago} className="shrink-0" />
             <div className="min-w-0">
               <p className="text-xs text-dark-text-muted truncate">
                 {formatearFecha(abono.fecha)}

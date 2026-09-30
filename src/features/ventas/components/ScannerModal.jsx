@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
+import { IconCerrar } from '../../home/NavIcons'
 
 const SCANNER_ELEMENT_ID = 'bodegatech-scanner-region'
 
@@ -71,19 +72,18 @@ export function ScannerModal({ onCodigoEscaneado, onCerrar }) {
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex flex-col items-center justify-center px-4">
       <div className="bg-white rounded-2xl overflow-hidden w-full max-w-sm">
-        <div className="p-4 flex items-center justify-between border-b border-slate-100">
-          <h3 className="font-bold text-dark-text">Escanear producto</h3>
-          <button
-            onClick={onCerrar}
-            className="text-dark-text-muted text-xl font-bold px-2"
-          >
-            ✕
+        <div className="px-5 py-4 flex items-center justify-between border-b border-slate-200">
+          <h3 className="font-semibold text-slate-900 text-lg tracking-tight">Escanear producto</h3>
+          <button onClick={onCerrar} aria-label="Cerrar" className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500
+                       hover:bg-slate-100 hover:text-slate-900 transition-colors duration-150
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900">
+            <IconCerrar className="w-4 h-4" />
           </button>
         </div>
 
         <div id={SCANNER_ELEMENT_ID} className="w-full aspect-square bg-black" />
 
-        <p className="text-center text-xs text-dark-text-muted p-3">
+        <p className="text-center text-xs text-slate-500 p-3">
           Apunta la cámara al código de barras del producto
         </p>
       </div>

@@ -10,6 +10,7 @@ import { ScannerModal } from './components/ScannerModal'
 import { CartItemList } from './components/CartItemList'
 import { SelectorClienteModal } from './components/SelectorClienteModal.jsx'
 import { CantidadGranelModal } from './components/CantidadGranelModal'
+import { IconCarrito, IconCamara, IconChevron } from '../home/NavIcons'
 
 const DENOMINACIONES_SUGERIDAS = [10, 20, 50]
 
@@ -364,11 +365,26 @@ export function VentasPage({ onVentaFinalizada }) {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-32">
-      <header className="bg-primary px-5 py-5 flex items-center gap-3">
-        <button onClick={onVentaFinalizada} className="text-white text-xl">
-          ←
-        </button>
-        <h1 className="text-white font-bold text-lg">Nueva Venta</h1>
+      <header className="bg-white border-b border-slate-200 px-5 pt-6 pb-5">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onVentaFinalizada}
+            aria-label="Volver"
+            className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white
+                       text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors duration-150
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+          >
+            <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
+              <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+              <IconCarrito className="w-5 h-5" />
+            </span>
+            <h1 className="text-slate-900 font-semibold text-lg tracking-tight truncate">Nueva Venta</h1>
+          </div>
+        </div>
       </header>
 
       <main className="px-4 pt-4 space-y-4">
@@ -404,7 +420,7 @@ export function VentasPage({ onVentaFinalizada }) {
                     className="w-full text-left px-4 py-3 hover:bg-slate-50 flex justify-between"
                   >
                     <span className="text-sm text-dark-text">{producto.nombre}</span>
-                    <span className="text-sm font-semibold text-primary whitespace-nowrap">
+                    <span className="text-sm font-semibold text-slate-900 whitespace-nowrap">
                       {formatCurrency(producto.precioVenta)}
                       {producto.tipoVenta === 'granel' ? ` / ${producto.unidadMedida}` : ''}
                     </span>
@@ -418,11 +434,11 @@ export function VentasPage({ onVentaFinalizada }) {
         {/* Botón de escáner */}
         <button
           onClick={() => setMostrarScanner(true)}
-          className="w-full bg-primary text-white font-bold text-lg py-5 rounded-2xl
-                     shadow-md active:scale-95 transition-transform duration-100
-                     flex items-center justify-center gap-2"
+          className="w-full bg-slate-900 text-white font-semibold text-base py-4 rounded-xl shadow-sm
+                     hover:bg-slate-800 active:bg-slate-950 transition-colors duration-150
+                     flex items-center justify-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
         >
-          <span className="text-2xl">📷</span>
+          <IconCamara className="w-6 h-6" />
           ESCANEAR PRODUCTO
         </button>
 
@@ -442,10 +458,10 @@ export function VentasPage({ onVentaFinalizada }) {
 
         {/* Selección de forma de pago */}
         {carrito.length > 0 && (
-          <section className="card space-y-3">
+          <section className="rounded-2xl bg-white border border-slate-200 shadow-sm p-4 space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-dark-text-muted">Total a pagar</span>
-              <span className="text-2xl font-bold text-dark-text">{formatCurrency(total)}</span>
+              <span className="text-2xl font-bold text-slate-900">{formatCurrency(total)}</span>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
@@ -497,7 +513,7 @@ export function VentasPage({ onVentaFinalizada }) {
                     <button
                       key={billete}
                       onClick={() => setMontoRecibido(billete)}
-                      className="flex-1 py-2 rounded-lg bg-slate-100 font-semibold text-dark-text active:scale-95"
+                      className="flex-1 py-2 rounded-lg border border-slate-200 bg-white font-semibold text-slate-800 hover:bg-slate-50 active:bg-slate-100 transition-colors duration-150"
                     >
                       S/ {billete}
                     </button>
@@ -531,8 +547,9 @@ export function VentasPage({ onVentaFinalizada }) {
                       ? clienteSeleccionado?.nombre || 'Cliente seleccionado'
                       : 'Selecciona un cliente...'}
                   </span>
-                  <span className="text-dark-text-muted text-sm">
-                    {hayClienteAsignado ? 'Cambiar ▾' : '▾'}
+                  <span className="flex items-center gap-1 text-slate-500 text-sm">
+                    {hayClienteAsignado && 'Cambiar'}
+                    <IconChevron className="w-4 h-4" />
                   </span>
                 </button>
 
@@ -549,7 +566,9 @@ export function VentasPage({ onVentaFinalizada }) {
               type="button"
               onClick={finalizarVenta}
               disabled={!modoPago || guardando || ventaFiadaSinCliente}
-              className="btn-success w-full text-lg"
+              className="w-full rounded-xl bg-slate-900 text-white font-semibold text-base py-4 shadow-sm
+                         hover:bg-slate-800 active:bg-slate-950 transition-colors duration-150
+                         disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
             >
               {guardando
                 ? 'Guardando...'

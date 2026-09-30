@@ -45,14 +45,15 @@ export function NuevoClienteModal({ onCerrar, onClienteCreado }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center px-4">
       <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
-        {/* Encabezado con gradiente, en sintonía con AuthPage/HomeScreen */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 to-purple-600 px-5 py-4 flex items-center justify-between">
-          <div className="absolute -top-8 -right-8 w-28 h-28 bg-white/10 rounded-full blur-2xl" />
-          <h3 className="relative font-bold text-white text-lg">Nuevo cliente</h3>
+        {/* Encabezado sobrio: fondo blanco y borde inferior sutil */}
+        <div className="bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between">
+          <h3 className="font-semibold text-slate-900 text-lg tracking-tight">Nuevo cliente</h3>
           <button
             onClick={onCerrar}
-            className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white
-                       hover:bg-white/25 active:scale-90 transition-all duration-150"
+            aria-label="Cerrar"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500
+                       hover:bg-slate-100 hover:text-slate-900 transition-colors duration-150
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
           >
             <IconCerrar className="w-4 h-4" />
           </button>
@@ -87,9 +88,9 @@ export function NuevoClienteModal({ onCerrar, onClienteCreado }) {
           <button
             onClick={manejarGuardar}
             disabled={guardando}
-            className="w-full bg-gradient-to-r from-primary-600 to-purple-600 text-white font-semibold py-3.5
-                       rounded-xl shadow-md shadow-primary-600/20 active:scale-95 transition-all duration-150
-                       disabled:opacity-50 disabled:pointer-events-none"
+            className="w-full bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-semibold py-3.5
+                       rounded-xl shadow-sm transition-colors duration-150
+                       disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
           >
             {guardando ? 'Guardando...' : 'Guardar cliente'}
           </button>

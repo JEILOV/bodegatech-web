@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { registrarAbonoEnNube } from '../../../services/firestoreDataService'
 import { formatCurrency } from '../../../utils/formatCurrency'
+import { IconoMetodoPago } from '../../../components/MetodosPago'
+import { IconCerrar } from '../../home/NavIcons'
 
 const MEDIOS_PAGO = [
-  { valor: 'efectivo', etiqueta: 'Efectivo', icono: '💵' },
-  { valor: 'yape', etiqueta: 'Yape', icono: '📱' },
-  { valor: 'plin', etiqueta: 'Plin', icono: '📲' },
+  { valor: 'efectivo', etiqueta: 'Efectivo' },
+  { valor: 'yape', etiqueta: 'Yape' },
+  { valor: 'plin', etiqueta: 'Plin' },
 ]
 
 export function AbonoModal({ cliente, onCerrar, onAbonoRegistrado }) {
@@ -62,13 +64,19 @@ export function AbonoModal({ cliente, onCerrar, onAbonoRegistrado }) {
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center px-4">
       <div className="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-dark-text text-lg">Registrar abono</h3>
-          <button onClick={onCerrar} className="text-dark-text-muted text-xl font-bold px-2">
-            ✕
+          <h3 className="font-semibold text-slate-900 text-lg tracking-tight">Registrar abono</h3>
+          <button
+            onClick={onCerrar}
+            aria-label="Cerrar"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500
+                       hover:bg-slate-100 hover:text-slate-900 transition-colors duration-150
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+          >
+            <IconCerrar className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="bg-slate-50 rounded-xl p-3">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
           <p className="text-sm text-dark-text-muted">{cliente.nombre}</p>
           <p className="text-lg font-bold text-warning">
             Deuda actual: {formatCurrency(cliente.deudaTotal)}
@@ -101,21 +109,29 @@ export function AbonoModal({ cliente, onCerrar, onAbonoRegistrado }) {
                 key={medio.valor}
                 type="button"
                 onClick={() => setTipoPago(medio.valor)}
-                className={`flex flex-col items-center justify-center gap-1 rounded-xl border py-2.5 text-xs font-semibold transition-colors
+                className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border py-2.5 text-xs font-semibold transition-colors
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                   ${
                     tipoPago === medio.valor
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-slate-200 text-dark-text-muted'
+                      ? 'border-slate-900 bg-slate-50 text-slate-900 ring-1 ring-slate-900'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                   }`}
               >
-                <span className="text-lg leading-none">{medio.icono}</span>
+                <IconoMetodoPago metodo={medio.valor} className="w-6 h-6" />
                 {medio.etiqueta}
               </button>
             ))}
           </div>
         </div>
 
-        <button onClick={manejarConfirmar} disabled={!puedeConfirmar} className="btn-success w-full">
+        <button
+          onClick={manejarConfirmar}
+          disabled={!puedeConfirmar}
+          className="w-full rounded-xl bg-slate-900 text-white font-semibold py-3 shadow-sm
+                     hover:bg-slate-800 active:bg-slate-950 transition-colors duration-150
+                     disabled:opacity-50 disabled:pointer-events-none
+                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+        >
           {guardando ? 'Guardando...' : 'Confirmar abono'}
         </button>
       </div>

@@ -152,27 +152,25 @@ export function PlanesPage({ motivo = null, estado, nombreBodega, correo, onCerr
       aria-labelledby="planes-titulo"
       className="fixed inset-0 z-[100] overflow-y-auto overscroll-contain bg-slate-50"
     >
-      <header className="relative overflow-hidden bg-gradient-to-br from-primary-600 to-purple-600 px-5 pt-8 pb-16 rounded-b-3xl shadow-lg shadow-primary-600/20">
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-
-        <div className="relative mx-auto max-w-3xl">
+      <header className="bg-white border-b border-slate-200 px-5 pt-6 pb-5">
+        <div className="mx-auto max-w-3xl">
           <div className="flex items-center gap-3">
             <button
               ref={botonNavegarRef}
               onClick={manejarNavegar}
               aria-label={enPago ? 'Volver a los planes' : 'Cerrar y volver a lo que estabas haciendo'}
-              className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white
-                         active:scale-90 transition-transform duration-100 hover:bg-white/25
-                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white
+                         text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors duration-150
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
             >
               <IconFlechaIzquierda />
             </button>
-            <h1 id="planes-titulo" className="text-white font-bold text-xl">
+            <h1 id="planes-titulo" className="text-slate-900 font-semibold text-xl tracking-tight">
               {enPago ? 'Activar Plan Pro' : 'Planes de BodegaTech'}
             </h1>
           </div>
 
-          <p className="mt-3 max-w-md text-sm text-white/80">
+          <p className="mt-3 max-w-md text-sm text-slate-500">
             {enPago
               ? 'Paga con Yape o Plin y envíanos el comprobante por WhatsApp.'
               : 'Empieza gratis. Pasa a Pro cuando tu bodega necesite más.'}
@@ -180,7 +178,7 @@ export function PlanesPage({ motivo = null, estado, nombreBodega, correo, onCerr
         </div>
       </header>
 
-      <main className="relative mx-auto max-w-3xl px-4 -mt-9 pb-12 space-y-4">
+      <main className="relative mx-auto max-w-3xl px-4 pt-5 pb-12 space-y-4">
         {aviso && (
           <div
             role="status"
@@ -202,25 +200,25 @@ export function PlanesPage({ motivo = null, estado, nombreBodega, correo, onCerr
                 className="order-2 md:order-1 flex flex-col rounded-2xl bg-white border border-slate-200 shadow-sm p-5"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <h2 id="plan-free-titulo" className="font-bold text-dark-text text-lg">
+                  <h2 id="plan-free-titulo" className="font-semibold text-slate-900 text-lg">
                     Plan gratuito
                   </h2>
                   {!estado.esPro && (
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-dark-text-light">
+                    <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
                       Tu plan actual
                     </span>
                   )}
                 </div>
 
                 <p className="mt-3 flex items-baseline gap-1.5">
-                  <span className="text-3xl font-bold text-dark-text">{formatCurrency(0)}</span>
-                  <span className="text-sm text-dark-text-muted">sin costo</span>
+                  <span className="text-3xl font-bold text-slate-900">{formatCurrency(0)}</span>
+                  <span className="text-sm text-slate-500">sin costo</span>
                 </p>
 
                 <ul className="mt-5 space-y-3 flex-1">
                   {BENEFICIOS_FREE.map((beneficio) => (
-                    <li key={beneficio} className="flex items-start gap-2.5 text-sm text-dark-text-light">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success-50 text-success-600">
+                    <li key={beneficio} className="flex items-start gap-2.5 text-sm text-slate-700">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700">
                         <IconCheck />
                       </span>
                       {beneficio}
@@ -231,7 +229,8 @@ export function PlanesPage({ motivo = null, estado, nombreBodega, correo, onCerr
                 <button
                   onClick={onCerrar}
                   className="mt-6 w-full rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold
-                             text-dark-text hover:border-primary-200 active:scale-95 transition-all duration-150"
+                             text-slate-900 hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100
+                             transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
                 >
                   {estado.esPro ? 'Volver' : 'Seguir con el plan gratuito'}
                 </button>
@@ -239,29 +238,26 @@ export function PlanesPage({ motivo = null, estado, nombreBodega, correo, onCerr
 
               <section
                 aria-labelledby="plan-pro-titulo"
-                className="order-1 md:order-2 relative flex flex-col rounded-2xl bg-gradient-to-br from-primary-600 to-purple-600
-                           p-5 text-white shadow-xl shadow-primary-600/25"
+                className="order-1 md:order-2 relative flex flex-col rounded-2xl bg-white border-2 border-slate-900
+                           p-5 shadow-sm"
               >
-                <span className="absolute -top-3 left-5 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-950 shadow-md">
+                <span className="absolute -top-3 left-5 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
                   Recomendado
                 </span>
-                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
-                  <div className="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-white/10 blur-2xl" />
-                </div>
 
-                <h2 id="plan-pro-titulo" className="relative mt-1 font-bold text-lg">
+                <h2 id="plan-pro-titulo" className="mt-1 font-semibold text-lg text-slate-900">
                   Plan Bodega Pro
                 </h2>
 
-                <p className="relative mt-3 flex items-baseline gap-1.5">
-                  <span className="text-3xl font-bold">{formatCurrency(PRECIO_PRO_MENSUAL)}</span>
-                  <span className="text-sm text-white/75">/ mes</span>
+                <p className="mt-3 flex items-baseline gap-1.5">
+                  <span className="text-3xl font-bold text-slate-900">{formatCurrency(PRECIO_PRO_MENSUAL)}</span>
+                  <span className="text-sm text-slate-500">/ mes</span>
                 </p>
 
-                <ul className="relative mt-5 space-y-3 flex-1">
+                <ul className="mt-5 space-y-3 flex-1">
                   {BENEFICIOS_PRO.map((beneficio) => (
-                    <li key={beneficio} className="flex items-start gap-2.5 text-sm text-white/95">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20 text-white">
+                    <li key={beneficio} className="flex items-start gap-2.5 text-sm text-slate-700">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white">
                         <IconCheck />
                       </span>
                       {beneficio}
@@ -271,13 +267,13 @@ export function PlanesPage({ motivo = null, estado, nombreBodega, correo, onCerr
 
                 <button
                   onClick={() => setPaso('pago')}
-                  className="relative mt-6 w-full rounded-xl bg-white py-3.5 text-base font-bold text-primary-700
-                             shadow-md active:scale-95 transition-transform duration-100
-                             focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  className="mt-6 w-full rounded-xl bg-slate-900 py-3.5 text-base font-semibold text-white shadow-sm
+                             hover:bg-slate-800 active:bg-slate-950 transition-colors duration-150
+                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
                 >
                   {esRenovacion ? 'Renovar Plan Pro' : 'Activar Plan Pro'}
                 </button>
-                <p className="relative mt-2 text-center text-xs text-white/75">
+                <p className="mt-2 text-center text-xs text-slate-500">
                   Pagas por Yape o Plin. Activamos tu plan manualmente.
                 </p>
               </section>
@@ -288,19 +284,19 @@ export function PlanesPage({ motivo = null, estado, nombreBodega, correo, onCerr
         {enPago && (
           <section
             aria-label="Pago del Plan Pro"
-            className="mx-auto max-w-md space-y-5 rounded-2xl bg-white border border-slate-100 shadow-sm p-5"
+            className="mx-auto max-w-md space-y-5 rounded-2xl bg-white border border-slate-200 shadow-sm p-5"
           >
             <div>
-              <h2 className="text-lg font-bold text-dark-text">
+              <h2 className="text-lg font-semibold text-slate-900">
                 Paga {formatCurrency(PRECIO_PRO_MENSUAL)} con Yape o Plin
               </h2>
-              <p className="mt-0.5 text-sm text-dark-text-muted">Plan Bodega Pro, 1 mes</p>
+              <p className="mt-0.5 text-sm text-slate-500">Plan Bodega Pro, 1 mes</p>
             </div>
 
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex h-56 w-56 items-center justify-center rounded-2xl border border-slate-200 bg-white p-3">
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex h-56 w-56 items-center justify-center rounded-xl border border-slate-200 bg-white p-3">
                 {qrNoCargo ? (
-                  <p className="text-center text-sm text-dark-text-muted">
+                  <p className="text-center text-sm text-slate-500">
                     No pudimos cargar el QR. Paga al número que aparece abajo.
                   </p>
                 ) : (
@@ -312,19 +308,20 @@ export function PlanesPage({ motivo = null, estado, nombreBodega, correo, onCerr
                   />
                 )}
               </div>
-              <p className="text-xs text-dark-text-muted">Escanéalo desde Yape o Plin</p>
+              <p className="text-xs text-slate-500">Escanéalo desde Yape o Plin</p>
             </div>
 
-            <dl className="divide-y divide-slate-100 rounded-xl border border-slate-200 text-sm">
+            <dl className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-slate-50 text-sm">
               <div className="flex items-center justify-between gap-3 px-4 py-3">
-                <dt className="text-dark-text-muted">Número</dt>
-                <dd className="flex items-center gap-2 font-bold text-dark-text tabular-nums">
+                <dt className="text-slate-500">Número</dt>
+                <dd className="flex items-center gap-2 font-semibold text-slate-900 tabular-nums">
                   {PAGO.numero}
                   <button
                     onClick={copiarNumero}
                     aria-label="Copiar número de Yape y Plin"
-                    className="flex items-center gap-1 rounded-lg bg-primary-50 px-2 py-1 text-xs font-semibold
-                               text-primary-700 hover:bg-primary-100 active:scale-95 transition-all duration-150"
+                    className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold
+                               text-slate-700 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200
+                               transition-colors duration-150"
                   >
                     <IconCopiar className="h-3.5 w-3.5" />
                     {copiado ? 'Copiado' : 'Copiar'}
@@ -332,12 +329,12 @@ export function PlanesPage({ motivo = null, estado, nombreBodega, correo, onCerr
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3 px-4 py-3">
-                <dt className="text-dark-text-muted">Titular</dt>
-                <dd className="text-right font-bold text-dark-text">{PAGO.titular}</dd>
+                <dt className="text-slate-500">Titular</dt>
+                <dd className="text-right font-semibold text-slate-900">{PAGO.titular}</dd>
               </div>
               <div className="flex items-center justify-between gap-3 px-4 py-3">
-                <dt className="text-dark-text-muted">Monto</dt>
-                <dd className="font-bold text-dark-text tabular-nums">{formatCurrency(PRECIO_PRO_MENSUAL)}</dd>
+                <dt className="text-slate-500">Monto</dt>
+                <dd className="font-semibold text-slate-900 tabular-nums">{formatCurrency(PRECIO_PRO_MENSUAL)}</dd>
               </div>
             </dl>
 
@@ -347,8 +344,8 @@ export function PlanesPage({ motivo = null, estado, nombreBodega, correo, onCerr
 
             <ol className="space-y-3">
               {PASOS_PAGO.map((texto, indice) => (
-                <li key={texto} className="flex items-start gap-3 text-sm text-dark-text-light">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary-700">
+                <li key={texto} className="flex items-start gap-3 text-sm text-slate-700">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
                     {indice + 1}
                   </span>
                   <span className="pt-0.5">{texto}</span>
@@ -361,13 +358,14 @@ export function PlanesPage({ motivo = null, estado, nombreBodega, correo, onCerr
               target="_blank"
               rel="noopener noreferrer"
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3.5 text-base
-                         font-bold text-white shadow-md active:scale-95 transition-transform duration-100"
+                         font-semibold text-white shadow-sm hover:bg-[#1FB855] active:bg-[#1AA34D]
+                         transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
             >
               <IconChat className="h-5 w-5" />
               Enviar comprobante por WhatsApp
             </a>
 
-            <p className="text-center text-xs text-dark-text-muted">
+            <p className="text-center text-xs text-slate-500">
               El mensaje incluye el nombre de tu bodega y tu correo para que podamos ubicar tu cuenta.
             </p>
           </section>

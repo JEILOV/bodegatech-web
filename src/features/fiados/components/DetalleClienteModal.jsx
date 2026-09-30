@@ -4,13 +4,8 @@ import { db } from '../../../db/dexie'
 import { actualizarClienteEnNube } from '../../../services/firestoreDataService'
 import { formatCurrency } from '../../../utils/formatCurrency'
 import { formatearFechaCorta } from '../../../utils/fechas'
+import { IconoMetodoPago } from '../../../components/MetodosPago'
 import { IconCerrar, IconEditar, IconCaja } from '../../home/NavIcons'
-
-const ICONOS_MEDIO_PAGO = {
-  efectivo: '💵',
-  yape: '📱',
-  plin: '📲',
-}
 
 /**
  * Modal de detalle de un cliente fiado. Se abre al tocar su tarjeta desde
@@ -98,14 +93,15 @@ export function DetalleClienteModal({ cliente, onCerrar }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center px-4">
       <div className="bg-white rounded-2xl w-full max-w-sm max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
-        {/* Encabezado con gradiente, en sintonía con AuthPage/HomeScreen */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 to-purple-600 px-5 py-4 flex items-center justify-between flex-shrink-0">
-          <div className="absolute -top-8 -right-8 w-28 h-28 bg-white/10 rounded-full blur-2xl" />
-          <h3 className="relative font-bold text-white text-lg">Detalle del cliente</h3>
+        {/* Encabezado sobrio: fondo blanco y borde inferior sutil */}
+        <div className="bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between flex-shrink-0">
+          <h3 className="font-semibold text-slate-900 text-lg tracking-tight">Detalle del cliente</h3>
           <button
             onClick={onCerrar}
-            className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white
-                       hover:bg-white/25 active:scale-90 transition-all duration-150"
+            aria-label="Cerrar"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500
+                       hover:bg-slate-100 hover:text-slate-900 transition-colors duration-150
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
           >
             <IconCerrar className="w-4 h-4" />
           </button>
@@ -140,16 +136,16 @@ export function DetalleClienteModal({ cliente, onCerrar }) {
                   <button
                     onClick={cancelarEdicion}
                     disabled={guardando}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-dark-text-muted font-semibold text-sm
-                               hover:border-slate-300 transition-colors duration-150"
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-sm
+                               hover:bg-slate-50 hover:border-slate-300 transition-colors duration-150"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={manejarGuardar}
                     disabled={guardando || !huboCambios}
-                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-purple-600 text-white
-                               font-semibold text-sm shadow-sm active:scale-95 transition-all duration-150
+                    className="flex-1 py-2.5 rounded-xl bg-slate-900 text-white font-semibold text-sm shadow-sm
+                               hover:bg-slate-800 active:bg-slate-950 transition-colors duration-150
                                disabled:opacity-50 disabled:pointer-events-none"
                   >
                     {guardando ? 'Guardando...' : 'Guardar cambios'}
@@ -157,7 +153,7 @@ export function DetalleClienteModal({ cliente, onCerrar }) {
                 </div>
               </>
             ) : (
-              <div className="bg-slate-50 rounded-xl p-3.5 flex items-start justify-between gap-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-semibold text-dark-text truncate">{cliente.nombre}</p>
                   <p className="text-xs text-dark-text-muted">
@@ -173,8 +169,8 @@ export function DetalleClienteModal({ cliente, onCerrar }) {
                 </div>
                 <button
                   onClick={() => setEditando(true)}
-                  className="flex items-center gap-1 text-xs font-semibold text-primary-700 flex-shrink-0 px-2 py-1
-                             hover:text-primary-800 transition-colors duration-150"
+                  className="flex items-center gap-1 text-xs font-semibold text-slate-700 flex-shrink-0 px-2 py-1
+                             hover:text-slate-900 transition-colors duration-150"
                 >
                   <IconEditar className="w-3.5 h-3.5" /> Editar
                 </button>
@@ -207,9 +203,7 @@ export function DetalleClienteModal({ cliente, onCerrar }) {
                         {transaccion.tipo === 'compra' ? (
                           <IconCaja className="w-3.5 h-3.5" />
                         ) : (
-                          <span className="text-sm leading-none">
-                            {ICONOS_MEDIO_PAGO[transaccion.tipoPago] || '💰'}
-                          </span>
+                          <IconoMetodoPago metodo={transaccion.tipoPago} className="w-4 h-4" />
                         )}
                       </span>
                       <div className="min-w-0">
