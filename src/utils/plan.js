@@ -1,4 +1,4 @@
-import { PLAN_FREE, PLAN_PRO } from '../config/planes'
+import { DIAS_PLAN_PRO, PLAN_FREE, PLAN_PRO } from '../config/planes'
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000
 
@@ -73,4 +73,35 @@ export function calcularEstadoPlan(perfil, ahora = Date.now()) {
 /** "30 de octubre de 2026" */
 export function formatearFechaLarga(fecha) {
   return fecha.toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+/**
+ * Nuevo vencimiento al activar "1 mes Pro" desde el panel de administración.
+ *
+ * - Bodega gratuita o con Pro vencido: 30 días desde hoy.
+ * - Bodega con Pro vigente y fecha: 30 días desde ESA fecha, para que quien
+ *   renueva antes de tiempo no pierda los días que ya pagó.
+ *
+ * Siempre queda al final del día (23:59:59 hora local) para que el plan
+ * rija todo ese día y la fecha mostrada coincida con la esperada.
+ *
+ * @param {ReturnType<typeof calcularEstadoPlan>} estado
+ * @param {Date} [ahora]
+ * @returns {Date}
+ */
+export function calcularNuevoVencimiento(estado, ahora = new Date()) {
+  const base =
+    estado.esPro && estado.fechaVencimiento ? new Date(estado.fechaVencimiento) : new Date(ahora)
+  base.setDate(base.getDate() + DIAS_PLAN_PRO)
+  base.setHours(23, 59, 59, 999)
+  return base
+}
+
+/** Minúsculas y sin tildes, para que "Peña" se encuentre escribiendo "pena". */
+export function normalizarTexto(texto) {
+  return String(texto ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
 }

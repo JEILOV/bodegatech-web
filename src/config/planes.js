@@ -17,6 +17,9 @@ export const PLAN_PRO = 'pro'
 
 export const PRECIO_PRO_MENSUAL = 29.9
 
+/** Días que suma cada activación del Plan Pro ("1 mes"). */
+export const DIAS_PLAN_PRO = 30
+
 /**
  * Límites del plan gratuito. El Plan Pro no tiene límites (ver
  * `verificarLimite` en SuscripcionProvider.jsx). Las claves coinciden
@@ -28,9 +31,9 @@ export const LIMITES_FREE = {
 }
 
 export const PAGO = {
-  numero: '934 626 153',
-  titular: 'JORDAN PARDO',
-  whatsapp: '51934626153',
+  numero: '999 999 999',
+  titular: 'Nombre del titular',
+  whatsapp: '51999999999',
   qrSrc: '/qr-yape-plin.png',
 }
 

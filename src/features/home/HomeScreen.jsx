@@ -4,7 +4,7 @@ import { db } from '../../db/dexie'
 import { usePerfilBodega } from '../../hooks/usePerfilBodega'
 import { useSuscripcion } from '../suscripcion/useSuscripcion'
 import { InsigniaPro } from '../suscripcion/InsigniaPro'
-import { IconDestello } from '../suscripcion/IconosSuscripcion'
+import { IconDestello, IconEscudo } from '../suscripcion/IconosSuscripcion'
 import { MetricsHeader } from './components/MetricsHeader'
 import { QuickActions } from './components/QuickActions'
 import { CloudStatusPanel } from './components/CloudStatusPanel'
@@ -88,7 +88,7 @@ function construirHtmlListaReposicion(productos, nombreBodega) {
  * @param {import('firebase/auth').User} props.usuario - usuario autenticado (Firebase Auth)
  * @param {() => void} props.onCerrarSesion
  */
-export function HomeScreen({ usuario, onCerrarSesion, onNuevaVenta, onVerFiados, onVerInventario, onVerCierre }) {
+export function HomeScreen({ usuario, onCerrarSesion, onNuevaVenta, onVerFiados, onVerInventario, onVerCierre, onVerAdmin }) {
   // Perfil de la bodega (users/{uid} en Firestore): nombreBodega,
   // nombreAdministrador. `undefined` = cargando, `null` = no existe
   // (cuenta creada antes de que se guardara este perfil).
@@ -96,7 +96,7 @@ export function HomeScreen({ usuario, onCerrarSesion, onNuevaVenta, onVerFiados,
 
   // Plan de suscripción: alimenta el acceso a PlanesPage desde el
   // encabezado y el bloqueo suave de la lista de reposición (función Pro).
-  const { esPro, esFree, vencido, cargandoPlan, abrirPlanes, verificarPro } = useSuscripcion()
+  const { esPro, esFree, vencido, cargandoPlan, abrirPlanes, verificarPro, esAdmin } = useSuscripcion()
 
   // Prioridad para el nombre mostrado en el encabezado:
   // 1) nombreBodega guardado en Firestore al registrarse
@@ -239,6 +239,20 @@ export function HomeScreen({ usuario, onCerrarSesion, onNuevaVenta, onVerFiados,
           onVerInventario={onVerInventario}
           onVerCierre={onVerCierre}
         />
+
+        {/* Solo las cuentas administradoras (documento en `admins/{uid}`)
+            ven este acceso; el resto de bodegueros nunca lo nota. */}
+        {esAdmin && (
+          <button
+            onClick={onVerAdmin}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-primary-200
+                       bg-primary-50 py-3 text-sm font-semibold text-primary-700 active:scale-[0.98]
+                       hover:bg-primary-100 transition-all duration-150"
+          >
+            <IconEscudo className="w-[18px] h-[18px]" />
+            Administrar planes
+          </button>
+        )}
 
         <section className="rounded-2xl bg-white border border-slate-100 shadow-sm p-4">
           <div className="flex items-center justify-between gap-2 mb-1">

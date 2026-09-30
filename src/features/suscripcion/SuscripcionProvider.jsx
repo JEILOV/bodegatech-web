@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePerfilBodega } from '../../hooks/usePerfilBodega'
+import { useEsAdmin } from '../../hooks/useEsAdmin'
 import { useBackableState } from '../../hooks/useBackableState'
 import { LIMITES_FREE } from '../../config/planes'
 import { calcularEstadoPlan } from '../../utils/plan'
@@ -34,6 +35,10 @@ const ESPERA_MAXIMA_MS = 2 ** 31 - 1
 export function SuscripcionProvider({ usuario, children }) {
   const perfil = usePerfilBodega(usuario?.uid)
   const cargandoPlan = perfil === undefined
+
+  // Administrador (documento `admins/{uid}`): habilita el acceso al panel
+  // de planes. Vive acá para que Home y el panel lo lean del mismo lugar.
+  const estadoAdmin = useEsAdmin(usuario?.uid)
 
   const [ahora, setAhora] = useState(() => Date.now())
   const [planesAbierto, setPlanesAbierto] = useState(false)
@@ -99,12 +104,14 @@ export function SuscripcionProvider({ usuario, children }) {
       ...estado,
       esFree: !cargandoPlan && !estado.esPro,
       cargandoPlan,
+      esAdmin: estadoAdmin === true,
+      cargandoAdmin: estadoAdmin === undefined,
       abrirPlanes,
       cerrarPlanes,
       verificarPro,
       verificarLimite,
     }),
-    [estado, cargandoPlan, abrirPlanes, cerrarPlanes, verificarPro, verificarLimite]
+    [estado, cargandoPlan, estadoAdmin, abrirPlanes, cerrarPlanes, verificarPro, verificarLimite]
   )
 
   return (

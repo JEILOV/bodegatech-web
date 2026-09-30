@@ -52,3 +52,18 @@ export function IconInfo({ className = 'w-4 h-4' }) {
     </svg>
   )
 }
+
+/** Escudo: funciones de administración. */
+export function IconEscudo({ className = 'w-5 h-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M12 3.5l7 2.6v5.4c0 4.3-2.8 7.4-7 9-4.2-1.6-7-4.7-7-9V6.1l7-2.6z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M9 12l2.2 2.2L15.2 10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}

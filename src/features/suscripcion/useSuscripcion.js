@@ -25,6 +25,8 @@ import { SuscripcionContext } from './SuscripcionContext'
  *   fechaVencimiento: Date | null,
  *   diasRestantes: number | null,
  *   cargandoPlan: boolean,
+ *   esAdmin: boolean,
+ *   cargandoAdmin: boolean,
  *   abrirPlanes: (motivo?: string | null) => void,
  *   verificarPro: (motivo?: string) => boolean,
  *   verificarLimite: (motivo: string, cantidadActual: number) => boolean,

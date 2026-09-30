@@ -10,6 +10,7 @@ import { CierreCajaPage } from './features/ventas/CierreCajaPage'
 import { FiadosPage } from './features/fiados/FiadosPage'
 import { InventarioPage } from './features/inventario/InventarioPage'
 import { SuscripcionProvider } from './features/suscripcion/SuscripcionProvider'
+import { AdminPlanesPage } from './features/suscripcion/AdminPlanesPage'
 
 // Tiempo máximo que esperamos la primera descarga de Firestore antes de
 // continuar igual con lo que haya en Dexie (por ejemplo, sin internet).
@@ -183,6 +184,11 @@ function App() {
     contenido = <CierreCajaPage key={usuario.uid} onVolver={() => setPantalla('home')} />
   } else if (pantalla === 'inventario') {
     contenido = <InventarioPage key={usuario.uid} onVolver={() => setPantalla('home')} />
+  } else if (pantalla === 'admin') {
+    // Panel de administración de planes: además de esconder el acceso a
+    // quien no es admin, la propia pantalla verifica el permiso y las
+    // reglas de Firestore rechazan cualquier lectura/escritura no autorizada.
+    contenido = <AdminPlanesPage key={usuario.uid} onVolver={() => setPantalla('home')} />
   } else {
     contenido = (
       <HomeScreen
@@ -202,6 +208,7 @@ function App() {
         onVerFiados={() => setPantalla('fiados')}
         onVerInventario={() => setPantalla('inventario')}
         onVerCierre={() => setPantalla('cierre')}
+        onVerAdmin={() => setPantalla('admin')}
       />
     )
   }
